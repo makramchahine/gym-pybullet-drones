@@ -130,7 +130,7 @@ class VisionAviary(BaseAviary):
                                                                    high=100,
                                                                    shape=(self.IMG_RES[1],
                                                                    self.IMG_RES[0]),
-                                                                   dtype=np.int
+                                                                   dtype=np.int64
                                                                    )
                                                  }) for i in range(self.NUM_DRONES)})
     

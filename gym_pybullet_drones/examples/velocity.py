@@ -10,7 +10,7 @@ In a terminal, run as:
 
 Notes
 -----
-The drones use interal PID control to track a target velocity.
+The drones use internal PID control to track a target velocity.
 
 """
 import os

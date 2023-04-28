@@ -49,21 +49,7 @@ class Logger(object):
         self.timestamps = np.zeros((num_drones, duration_sec*self.LOGGING_FREQ_HZ))
         #### Note: this is the suggest information to log ##############################
         self.states = np.zeros((num_drones, 16, duration_sec*self.LOGGING_FREQ_HZ)) #### 16 states: pos_x,
-                                                                                                  # pos_y,
-                                                                                                  # pos_z,
-                                                                                                  # vel_x,
-                                                                                                  # vel_y,
-                                                                                                  # vel_z,
-                                                                                                  # roll,
-                                                                                                  # pitch,
-                                                                                                  # yaw,
-                                                                                                  # ang_vel_x,
-                                                                                                  # ang_vel_y,
-                                                                                                  # ang_vel_z,
-                                                                                                  # rpm0,
-                                                                                                  # rpm1,
-                                                                                                  # rpm2,
-                                                                                                  # rpm3
+                                                              # rpm3
         #### Note: this is the suggest information to log ##############################
         self.controls = np.zeros((num_drones, 12, duration_sec*self.LOGGING_FREQ_HZ)) #### 12 control targets: pos_x,
                                                                                                              # pos_y,
@@ -139,66 +125,71 @@ class Logger(object):
             Added to the foldername.
 
         """
-        csv_dir = os.path.join(self.OUTPUT_FOLDER, "save-flight-"+comment+"-"+datetime.now().strftime("%m.%d.%Y_%H.%M.%S"))
+        csv_dir = os.path.join(self.OUTPUT_FOLDER, comment)
         if not os.path.exists(csv_dir):
             os.makedirs(csv_dir+'/')
         t = np.arange(0, self.timestamps.shape[1]/self.LOGGING_FREQ_HZ, 1/self.LOGGING_FREQ_HZ)
         for i in range(self.NUM_DRONES):
-            with open(csv_dir+"/x"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 0, :]])), delimiter=",")
-            with open(csv_dir+"/y"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 1, :]])), delimiter=",")
-            with open(csv_dir+"/z"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 2, :]])), delimiter=",")
-            ####
-            with open(csv_dir+"/r"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 6, :]])), delimiter=",")
-            with open(csv_dir+"/p"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 7, :]])), delimiter=",")
-            with open(csv_dir+"/ya"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 8, :]])), delimiter=",")
-            ####
-            with open(csv_dir+"/rr"+str(i)+".csv", 'wb') as out_file:
-                rdot = np.hstack([0, (self.states[i, 6, 1:] - self.states[i, 6, 0:-1]) * self.LOGGING_FREQ_HZ ])
-                np.savetxt(out_file, np.transpose(np.vstack([t, rdot])), delimiter=",")
-            with open(csv_dir+"/pr"+str(i)+".csv", 'wb') as out_file:
-                pdot = np.hstack([0, (self.states[i, 7, 1:] - self.states[i, 7, 0:-1]) * self.LOGGING_FREQ_HZ ])
-                np.savetxt(out_file, np.transpose(np.vstack([t, pdot])), delimiter=",")
-            with open(csv_dir+"/yar"+str(i)+".csv", 'wb') as out_file:
-                ydot = np.hstack([0, (self.states[i, 8, 1:] - self.states[i, 8, 0:-1]) * self.LOGGING_FREQ_HZ ])
-                np.savetxt(out_file, np.transpose(np.vstack([t, ydot])), delimiter=",")
-            ###
-            with open(csv_dir+"/vx"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 3, :]])), delimiter=",")
-            with open(csv_dir+"/vy"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 4, :]])), delimiter=",")
-            with open(csv_dir+"/vz"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 5, :]])), delimiter=",")
-            ####
-            with open(csv_dir+"/wx"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 9, :]])), delimiter=",")
-            with open(csv_dir+"/wy"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 10, :]])), delimiter=",")
-            with open(csv_dir+"/wz"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 11, :]])), delimiter=",")
-            ####
-            with open(csv_dir+"/rpm0-"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 12, :]])), delimiter=",")
-            with open(csv_dir+"/rpm1-"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 13, :]])), delimiter=",")
-            with open(csv_dir+"/rpm2-"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 14, :]])), delimiter=",")
-            with open(csv_dir+"/rpm3-"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 15, :]])), delimiter=",")
-            ####
-            with open(csv_dir+"/pwm0-"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, (self.states[i, 12, :] - 4070.3) / 0.2685])), delimiter=",")
-            with open(csv_dir+"/pwm1-"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, (self.states[i, 13, :] - 4070.3) / 0.2685])), delimiter=",")
-            with open(csv_dir+"/pwm2-"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, (self.states[i, 14, :] - 4070.3) / 0.2685])), delimiter=",")
-            with open(csv_dir+"/pwm3-"+str(i)+".csv", 'wb') as out_file:
-                np.savetxt(out_file, np.transpose(np.vstack([t, (self.states[i, 15, :] - 4070.3) / 0.2685])), delimiter=",")
+            with open(csv_dir + "/log_" + str(i) + ".csv", 'wb') as out_file:
+                np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 0:12, :]])), delimiter=",")
+                # write the header
+                out_file.seek(0)
+                out_file.write(b'time_total,att_x,att_y,att_z,vx,vy,vz,roll,pitch,yaw,ang_vel_x,ang_vel_y,ang_vel_z\n')
+            # with open(csv_dir+"/x"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 0, :]])), delimiter=",")
+            # with open(csv_dir+"/y"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 1, :]])), delimiter=",")
+            # with open(csv_dir+"/z"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 2, :]])), delimiter=",")
+            # ####
+            # with open(csv_dir+"/r"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 6, :]])), delimiter=",")
+            # with open(csv_dir+"/p"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 7, :]])), delimiter=",")
+            # with open(csv_dir+"/ya"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 8, :]])), delimiter=",")
+            # ####
+            # with open(csv_dir+"/rr"+str(i)+".csv", 'wb') as out_file:
+            #     rdot = np.hstack([0, (self.states[i, 6, 1:] - self.states[i, 6, 0:-1]) * self.LOGGING_FREQ_HZ ])
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, rdot])), delimiter=",")
+            # with open(csv_dir+"/pr"+str(i)+".csv", 'wb') as out_file:
+            #     pdot = np.hstack([0, (self.states[i, 7, 1:] - self.states[i, 7, 0:-1]) * self.LOGGING_FREQ_HZ ])
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, pdot])), delimiter=",")
+            # with open(csv_dir+"/yar"+str(i)+".csv", 'wb') as out_file:
+            #     ydot = np.hstack([0, (self.states[i, 8, 1:] - self.states[i, 8, 0:-1]) * self.LOGGING_FREQ_HZ ])
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, ydot])), delimiter=",")
+            # ###
+            # with open(csv_dir+"/vx"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 3, :]])), delimiter=",")
+            # with open(csv_dir+"/vy"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 4, :]])), delimiter=",")
+            # with open(csv_dir+"/vz"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 5, :]])), delimiter=",")
+            # ####
+            # with open(csv_dir+"/wx"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 9, :]])), delimiter=",")
+            # with open(csv_dir+"/wy"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 10, :]])), delimiter=",")
+            # with open(csv_dir+"/wz"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 11, :]])), delimiter=",")
+            # ####
+            # with open(csv_dir+"/rpm0-"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 12, :]])), delimiter=",")
+            # with open(csv_dir+"/rpm1-"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 13, :]])), delimiter=",")
+            # with open(csv_dir+"/rpm2-"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 14, :]])), delimiter=",")
+            # with open(csv_dir+"/rpm3-"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 15, :]])), delimiter=",")
+            # ####
+            # with open(csv_dir+"/pwm0-"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, (self.states[i, 12, :] - 4070.3) / 0.2685])), delimiter=",")
+            # with open(csv_dir+"/pwm1-"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, (self.states[i, 13, :] - 4070.3) / 0.2685])), delimiter=",")
+            # with open(csv_dir+"/pwm2-"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, (self.states[i, 14, :] - 4070.3) / 0.2685])), delimiter=",")
+            # with open(csv_dir+"/pwm3-"+str(i)+".csv", 'wb') as out_file:
+            #     np.savetxt(out_file, np.transpose(np.vstack([t, (self.states[i, 15, :] - 4070.3) / 0.2685])), delimiter=",")
 
     ################################################################################
     

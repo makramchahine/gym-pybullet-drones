@@ -137,7 +137,7 @@ class BaseAviary(gym.Env):
                 print("[ERROR] in BaseAviary.__init__(), aggregate_phy_steps incompatible with the desired video capture frame rate ({:f}Hz)".format(self.IMG_FRAME_PER_SEC))
                 exit()
             if self.RECORD:
-                # TODO: This doesn't appear to work in general 
+                # TODO: This doesn't appear to work in general
                 self.ONBOARD_IMG_PATH = os.path.join(self.OUTPUT_FOLDER, "recording_" + datetime.now().strftime("%m.%d.%Y_%H.%M.%S"))
                 os.makedirs(os.path.dirname(self.ONBOARD_IMG_PATH), exist_ok=True)
         #### Create attributes for dynamics control inputs #########
@@ -548,7 +548,7 @@ class BaseAviary(gym.Env):
         nth_drone : int
             The ordinal number/position of the desired drone in list self.DRONE_IDS.
         segmentation : bool, optional
-            Whehter to compute the compute the segmentation mask.
+            Whether to compute the compute the segmentation mask.
             It affects performance.
 
         Returns
@@ -946,20 +946,21 @@ class BaseAviary(gym.Env):
                    physicsClientId=self.CLIENT
                    )
         p.loadURDF("duck_vhacd.urdf",
-                   [-.5, -.5, .05],
-                   p.getQuaternionFromEuler([0, 0, 0]),
-                   physicsClientId=self.CLIENT
+                   [0.0, 0.0, 0.0],
+                   p.getQuaternionFromEuler([np.pi/2, 0, 0]),
+                   physicsClientId=self.CLIENT,
+                   globalScaling=4.0
                    )
-        p.loadURDF("cube_no_rotation.urdf",
-                   [-.5, -2.5, .5],
-                   p.getQuaternionFromEuler([0, 0, 0]),
-                   physicsClientId=self.CLIENT
-                   )
-        p.loadURDF("sphere2.urdf",
-                   [0, 2, .5],
-                   p.getQuaternionFromEuler([0,0,0]),
-                   physicsClientId=self.CLIENT
-                   )
+        # p.loadURDF("cube_no_rotation.urdf",
+        #            [-.5, -2.5, .5],
+        #            p.getQuaternionFromEuler([0, 0, 0]),
+        #            physicsClientId=self.CLIENT
+        #            )
+        # p.loadURDF("sphere2.urdf",
+        #            [0, 2, .5],
+        #            p.getQuaternionFromEuler([0,0,0]),
+        #            physicsClientId=self.CLIENT
+        #            )
     
     ################################################################################
     
