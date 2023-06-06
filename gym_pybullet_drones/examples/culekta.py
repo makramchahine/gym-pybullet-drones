@@ -11,7 +11,7 @@ In a terminal, run as:
 
 Notes
 -----
-The drones move, at different altitudes, along cicular trajectories
+The drones move, at different altitudes, along circular trajectories
 in the X-Y plane, around point (0, 0).
 
 """
@@ -26,6 +26,9 @@ import numpy as np
 import pybullet as p
 import matplotlib.pyplot as plt
 
+from tqdm import trange
+
+from scipy.signal import butter, filtfilt
 from gym_pybullet_drones.utils.enums import DroneModel, Physics, ImageType
 from gym_pybullet_drones.envs.CtrlAviary import CtrlAviary
 from gym_pybullet_drones.envs.VisionAviary import VisionAviary
@@ -94,15 +97,29 @@ def run(
 
     NUM_SW = random.randint(int(np.floor(NUM_WP / 4)), int(np.floor(3 * NUM_WP / 4)))
 
+    random_walk = [0]
+
+    for i in range(1, NUM_WP):
+        # Movement direction based on a random number
+        num = -1 if np.random.random() < 0.5 else 1
+        random_walk.append(random_walk[-1] + num)
+
+    rw = np.array(random_walk) / (3*np.max(np.abs(random_walk)))
+    b, a = butter(6, 0.0025, fs=1, btype='low')
+    rw = filtfilt(b, a, rw)
+
+
     for i in range(NUM_SW):
+        Rw = (1+rw[i])*R
         # define points on a circular trajectory with radius R and center at (0,0)
-        TARGET_POS[i, :] = R * np.cos((sign * i / NUM_WP) * (2 * np.pi) + Theta), R * np.sin(
+        TARGET_POS[i, :] = Rw * np.cos((sign * i / NUM_WP) * (2 * np.pi) + Theta), Rw * np.sin(
             (sign * i / NUM_WP) * (2 * np.pi) + Theta), 0
         TARGET_ATT[i, :] = 0, 0, (sign * i / NUM_WP) * (2 * np.pi) + Theta0
     # for the rest of the indices up to NUM_WP, set target positions to walk back along the trajectory
     counter = 0
     for i in range(NUM_SW, NUM_WP):
-        TARGET_POS[i, :] = R * np.cos((sign * (NUM_SW - counter) / NUM_WP) * (2 * np.pi) + Theta), R * np.sin(
+        Rw = (1+rw[i])*R
+        TARGET_POS[i, :] = Rw * np.cos((sign * (NUM_SW - counter) / NUM_WP) * (2 * np.pi) + Theta), Rw * np.sin(
             (sign * (NUM_SW - counter) / NUM_WP) * (2 * np.pi) + Theta), 0
         TARGET_ATT[i, :] = 0, 0, (sign * (NUM_SW - counter) / NUM_WP) * (2 * np.pi) + Theta0
         counter += 1
@@ -157,14 +174,13 @@ def run(
 
     #### Run the simulation ####################################
     CTRL_EVERY_N_STEPS = int(np.floor(env.SIM_FREQ / control_freq_hz))
-    REC_EVERY_N_STEPS = int(np.floor(env.SIM_FREQ / 4))
+    REC_EVERY_N_STEPS = int(np.floor(env.SIM_FREQ / 8))
     action = {str(i): np.array([0, 0, 0, 0]) for i in range(num_drones)}
     START = time.time()
     STEPS = CTRL_EVERY_N_STEPS * NUM_WP
     LABEL = []
 
-    for i in range(0, int(STEPS), AGGR_PHY_STEPS):
-
+    for i in trange(0, int(STEPS), AGGR_PHY_STEPS):
         #### Step the simulation ###################################
         obs, reward, done, info = env.step(action)
 
@@ -173,6 +189,7 @@ def run(
 
             #### Compute control for the current way point #############
             for j in range(num_drones):
+
                 action[str(j)], _, _ = ctrl[j].computeControlFromState(
                     control_timestep=CTRL_EVERY_N_STEPS * env.TIMESTEP,
                     state=obs[str(j)]["state"],
@@ -184,14 +201,14 @@ def run(
             for j in range(num_drones):
                 wp_counters[j] = wp_counters[j] + 1 if wp_counters[j] < (NUM_WP - 1) else 0
 
-        if i % REC_EVERY_N_STEPS == 0:
+
+        if i % REC_EVERY_N_STEPS == 0 and i>env.SIM_FREQ:
             rgb, dep, seg = env._getDroneImages(0)
             env._exportImage(img_type=ImageType.RGB,
                              img_input=rgb,
                              path=sim_dir,
                              frame_num=int(i / REC_EVERY_N_STEPS),
                              )
-
             ### Log the simulation ####################################
             for j in range(num_drones):
                 logger.log(drone=j,
