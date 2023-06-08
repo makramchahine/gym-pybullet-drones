@@ -59,13 +59,14 @@ DEFAULT_USER_DEBUG_GUI = False
 DEFAULT_AGGREGATE = True
 DEFAULT_OBSTACLES = True
 DEFAULT_SIMULATION_FREQ_HZ = 240
-DEFAULT_CONTROL_FREQ_HZ = 64
+DEFAULT_CONTROL_FREQ_HZ = 120
 DEFAULT_DURATION_SEC = 20
 DEFAULT_OUTPUT_FOLDER = 'results'
 DEFAULT_COLAB = False
-DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_communication/runner_models/val/params.json'
-DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_communication/runner_models/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-199_val-loss:0.0009_train-loss:0.0010_mse:0.0010_2023:05:17:12:02:55.hdf5'
-
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-199_val-loss:0.0009_train-loss:0.0010_mse:0.0010_2023:05:17:12:02:55.hdf5'
+DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v1/val/params.json'
+DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v1/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-098_val-loss:0.0008_train-loss:0.0009_mse:0.0009_2023:06:08:09:32:34.hdf5'
 
 def run(
         drone=DEFAULT_DRONES,
@@ -167,6 +168,10 @@ def run(
     START = time.time()
     STEPS = CTRL_EVERY_N_STEPS * NUM_WP
 
+    time_data = []
+    x_data = []
+    y_data = []
+
     for i in trange(0, int(STEPS), AGGR_PHY_STEPS):
 
         #### Step the simulation ###################################
@@ -223,6 +228,7 @@ def run(
 
                 vel_cmd[0] = vel_cmd[0] * np.cos(-yaw) + vel_cmd[1] * np.sin(-yaw)
                 vel_cmd[1] = -vel_cmd[0] * np.sin(-yaw)+ vel_cmd[1] * np.cos(-yaw)
+                # vel_cmd[2] = 0 # force vertical stability (z direction)
 
                 action[str(j)], _, _ = ctrl[j].computeControl(control_timestep=CTRL_EVERY_N_STEPS * env.TIMESTEP,
                                                               cur_pos=state[0:3],
@@ -235,7 +241,9 @@ def run(
                                                               target_rpy_rates=np.array([0, 0, vel_cmd[3]])
                                                               )
 
-
+                time_data.append(CTRL_EVERY_N_STEPS * env.TIMESTEP * i)
+                x_data.append(state[0])
+                y_data.append(state[1])
                 # logger.log(drone=j,
                 #            timestamp=int(i / CTRL_EVERY_N_STEPS),
                 #            state=obs[str(j)]["state"],
@@ -251,6 +259,21 @@ def run(
 
     #### Save the simulation results ###########################
     logger.save_as_csv(sim_name)  # Optional CSV save
+
+    # plot radius
+    time_data, x_data, y_data = np.array(time_data), np.array(x_data), np.array(y_data)
+
+    plt.plot(x_data, y_data)
+    # plot reference circle with radius R
+    theta = np.linspace(0, 2 * np.pi, 100)
+    plt.plot(R * np.cos(theta), R * np.sin(theta))
+    plt.savefig(sim_dir + "/path.jpg")
+    plt.close()
+
+    plt.plot(time_data, np.sqrt(x_data **2 + y_data **2))
+    plt.xlabel("Time (s)")
+    plt.ylabel("Radius (arb. units)")
+    plt.savefig(sim_dir + "/radius.jpg")
 
     #### Plot the simulation results ###########################
     if plot:

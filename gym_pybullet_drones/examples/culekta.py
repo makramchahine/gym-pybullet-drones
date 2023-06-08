@@ -53,6 +53,7 @@ DEFAULT_DURATION_SEC = 20
 DEFAULT_OUTPUT_FOLDER = 'results'
 DEFAULT_COLAB = False
 
+deviation_mode = "initial_deviation" # "random_walk" or "initial_deviation"
 
 def run(
         drone=DEFAULT_DRONES,
@@ -75,7 +76,10 @@ def run(
     H = .1
     H_STEP = .05
     R = .5
-    sim_name = "save-flight-" + datetime.now().strftime("%m.%d.%Y_%H.%M.%S")
+    # sim_name = "save-flight-" + datetime.now().strftime("%m.%d.%Y_%H.%M.%S")
+    sim_name = "save-flight-" + datetime.now().strftime("%m.%d.%Y_%H.%M.%S.%f") # include milliseconds in save name for parallel runs
+    
+
     sim_dir = os.path.join(output_folder, sim_name)
     if not os.path.exists(sim_dir):
         os.makedirs(sim_dir + '/')
@@ -95,7 +99,10 @@ def run(
     # random number taking values -1 or 1
     sign = random.choice([-1, 1])
 
+    # num of waypoints until turning point between 1/4 and 3/4 of the trajectory
     NUM_SW = random.randint(int(np.floor(NUM_WP / 4)), int(np.floor(3 * NUM_WP / 4)))
+    # initial deviation from the circular trajectory
+    DEVIATION_A = random.uniform(0.8, 1.2)
 
     random_walk = [0]
 
@@ -106,20 +113,29 @@ def run(
 
     rw = np.array(random_walk) / (3*np.max(np.abs(random_walk)))
     b, a = butter(6, 0.0025, fs=1, btype='low')
-    rw = filtfilt(b, a, rw)
+    rw = filtfilt(b, a, rw) # noise on the order of 0.3
 
-
+    # Forward pass
     for i in range(NUM_SW):
-        Rw = (1+rw[i])*R
+        if deviation_mode == "random_walk":
+            adj_R = R * (1+rw[i])
+        if deviation_mode == "initial_deviation":
+            adj_R = R * (1 + ((NUM_SW - i) / NUM_SW) * (DEVIATION_A - 1))
+        
         # define points on a circular trajectory with radius R and center at (0,0)
-        TARGET_POS[i, :] = Rw * np.cos((sign * i / NUM_WP) * (2 * np.pi) + Theta), Rw * np.sin(
+        TARGET_POS[i, :] = adj_R * np.cos((sign * i / NUM_WP) * (2 * np.pi) + Theta), adj_R * np.sin(
             (sign * i / NUM_WP) * (2 * np.pi) + Theta), 0
         TARGET_ATT[i, :] = 0, 0, (sign * i / NUM_WP) * (2 * np.pi) + Theta0
+
+    # Backwards pass
     # for the rest of the indices up to NUM_WP, set target positions to walk back along the trajectory
     counter = 0
     for i in range(NUM_SW, NUM_WP):
-        Rw = (1+rw[i])*R
-        TARGET_POS[i, :] = Rw * np.cos((sign * (NUM_SW - counter) / NUM_WP) * (2 * np.pi) + Theta), Rw * np.sin(
+        if deviation_mode == "random_walk":
+            adj_R = R * (1+rw[i])
+        if deviation_mode == "initial_deviation":
+            adj_R = R
+        TARGET_POS[i, :] = adj_R * np.cos((sign * (NUM_SW - counter) / NUM_WP) * (2 * np.pi) + Theta), adj_R * np.sin(
             (sign * (NUM_SW - counter) / NUM_WP) * (2 * np.pi) + Theta), 0
         TARGET_ATT[i, :] = 0, 0, (sign * (NUM_SW - counter) / NUM_WP) * (2 * np.pi) + Theta0
         counter += 1
@@ -236,6 +252,20 @@ def run(
 
     #### Save the simulation results ###########################
     logger.save_as_csv(sim_name)  # Optional CSV save
+
+    # read log_0.csv and plot radius
+    data = np.genfromtxt(sim_dir + "/log_0.csv", delimiter=",", skip_header=2)
+    plt.plot(data[:, 1], data[:, 2])
+    # plot reference circle with radius R
+    theta = np.linspace(0, 2 * np.pi, 100)
+    plt.plot(R * np.cos(theta), R * np.sin(theta))
+    plt.savefig(sim_dir + "/path.jpg")
+    plt.close()
+
+    plt.plot(data[:, 0], np.sqrt(data[:, 1] **2 + data[:, 2] **2))
+    plt.xlabel("Time (s)")
+    plt.ylabel("Radius (arb. units)")
+    plt.savefig(sim_dir + "/radius.jpg")
 
     #### Plot the simulation results ###########################
     if plot:
