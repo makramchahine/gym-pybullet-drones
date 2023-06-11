@@ -50,7 +50,7 @@ DEFAULT_OBSTACLES = True
 DEFAULT_SIMULATION_FREQ_HZ = 240
 DEFAULT_CONTROL_FREQ_HZ = 240
 DEFAULT_DURATION_SEC = 20
-DEFAULT_OUTPUT_FOLDER = 'results'
+DEFAULT_OUTPUT_FOLDER = 'train_v6'
 DEFAULT_COLAB = False
 
 deviation_mode = "initial_deviation" # "random_walk" or "initial_deviation"
@@ -76,9 +76,7 @@ def run(
     H = .1
     H_STEP = .05
     R = .5
-    # sim_name = "save-flight-" + datetime.now().strftime("%m.%d.%Y_%H.%M.%S")
     sim_name = "save-flight-" + datetime.now().strftime("%m.%d.%Y_%H.%M.%S.%f") # include milliseconds in save name for parallel runs
-    
 
     sim_dir = os.path.join(output_folder, sim_name)
     if not os.path.exists(sim_dir):
@@ -92,53 +90,44 @@ def run(
     AGGR_PHY_STEPS = int(simulation_freq_hz / control_freq_hz) if aggregate else 1
 
     #### Initialize a circular trajectory ######################
-    PERIOD = random.randint(16, 24)
+    PERIOD = random.randint(16, 24) * 8
     NUM_WP = control_freq_hz * PERIOD
     TARGET_POS = np.zeros((NUM_WP, 3))
     TARGET_ATT = np.zeros((NUM_WP, 3))
-    # random number taking values -1 or 1
+    # random number taking values -1 or 1, indicating initial direction
     sign = random.choice([-1, 1])
 
-    # num of waypoints until turning point between 1/4 and 3/4 of the trajectory
-    NUM_SW = random.randint(int(np.floor(NUM_WP / 4)), int(np.floor(3 * NUM_WP / 4)))
-    # initial deviation from the circular trajectory
-    DEVIATION_A = random.uniform(0.8, 1.2)
-
-    random_walk = [0]
-
-    for i in range(1, NUM_WP):
-        # Movement direction based on a random number
-        num = -1 if np.random.random() < 0.5 else 1
-        random_walk.append(random_walk[-1] + num)
-
-    rw = np.array(random_walk) / (3*np.max(np.abs(random_walk)))
-    b, a = butter(6, 0.0025, fs=1, btype='low')
-    rw = filtfilt(b, a, rw) # noise on the order of 0.3
+    # stochastic parameters
+    if random.random() < 0.5:
+        SWITCH_WP = random.randint(int(np.floor(NUM_WP / 4)), int(np.floor(3 * NUM_WP / 4))) # when to switch directions (left or right)
+    else:
+        SWITCH_WP = NUM_WP + 2 # never switch directions
+    RECOVERY_WP = random.randint(int(np.floor(NUM_WP / 4)), int(np.floor(3 * NUM_WP / 4))) # when to recover from the deviation (achieve the desired radius)
+    DEVIATION_A = random.uniform(0.8, 1.2) # initial deviation from the circular trajectory
 
     # Forward pass
-    for i in range(NUM_SW):
-        if deviation_mode == "random_walk":
-            adj_R = R * (1+rw[i])
-        if deviation_mode == "initial_deviation":
-            adj_R = R * (1 + ((NUM_SW - i) / NUM_SW) * (DEVIATION_A - 1))
-        
-        # define points on a circular trajectory with radius R and center at (0,0)
-        TARGET_POS[i, :] = adj_R * np.cos((sign * i / NUM_WP) * (2 * np.pi) + Theta), adj_R * np.sin(
-            (sign * i / NUM_WP) * (2 * np.pi) + Theta), 0
-        TARGET_ATT[i, :] = 0, 0, (sign * i / NUM_WP) * (2 * np.pi) + Theta0
-
-    # Backwards pass
-    # for the rest of the indices up to NUM_WP, set target positions to walk back along the trajectory
-    counter = 0
-    for i in range(NUM_SW, NUM_WP):
-        if deviation_mode == "random_walk":
-            adj_R = R * (1+rw[i])
-        if deviation_mode == "initial_deviation":
+    for i in range(NUM_WP):
+        # Handle deviation from radius
+        if i < RECOVERY_WP:
+            adj_R = R * (1 + ((RECOVERY_WP - i) / RECOVERY_WP) * (DEVIATION_A - 1))
+        else:
             adj_R = R
-        TARGET_POS[i, :] = adj_R * np.cos((sign * (NUM_SW - counter) / NUM_WP) * (2 * np.pi) + Theta), adj_R * np.sin(
-            (sign * (NUM_SW - counter) / NUM_WP) * (2 * np.pi) + Theta), 0
-        TARGET_ATT[i, :] = 0, 0, (sign * (NUM_SW - counter) / NUM_WP) * (2 * np.pi) + Theta0
-        counter += 1
+        
+        # Handle switching directions
+        if i < SWITCH_WP:
+            TARGET_POS[i, :] = (
+                adj_R * np.cos((sign * i / NUM_WP) * (2 * np.pi) + Theta), 
+                adj_R * np.sin((sign * i / NUM_WP) * (2 * np.pi) + Theta),
+                0
+            )
+            TARGET_ATT[i, :] = 0, 0, (sign * i / NUM_WP) * (2 * np.pi) + Theta0
+        else:
+            TARGET_POS[i, :] = (
+                adj_R * np.cos((sign * (2 * SWITCH_WP - i) / NUM_WP) * (2 * np.pi) + Theta),
+                adj_R * np.sin((sign * (2 * SWITCH_WP - i) / NUM_WP) * (2 * np.pi) + Theta),
+                0
+            )
+            TARGET_ATT[i, :] = 0, 0, (sign * (2 * SWITCH_WP - i) / NUM_WP) * (2 * np.pi) + Theta0
 
     wp_counters = np.array([int((i * NUM_WP / 6) % NUM_WP) for i in range(num_drones)])
 
@@ -190,7 +179,7 @@ def run(
 
     #### Run the simulation ####################################
     CTRL_EVERY_N_STEPS = int(np.floor(env.SIM_FREQ / control_freq_hz))
-    REC_EVERY_N_STEPS = int(np.floor(env.SIM_FREQ / 8))
+    REC_EVERY_N_STEPS = int(np.floor(env.SIM_FREQ / 8 * 8))
     action = {str(i): np.array([0, 0, 0, 0]) for i in range(num_drones)}
     START = time.time()
     STEPS = CTRL_EVERY_N_STEPS * NUM_WP
@@ -234,7 +223,7 @@ def run(
                                [TARGET_POS[wp_counters[j], 0:2], INIT_XYZS[j, 2], INIT_RPYS[j, :], np.zeros(6)])
                            )
 
-                if wp_counters[j] < NUM_SW:
+                if wp_counters[j] < SWITCH_WP:
                     LABEL.append(sign)
                 else:
                     LABEL.append(-sign)
@@ -253,19 +242,26 @@ def run(
     #### Save the simulation results ###########################
     logger.save_as_csv(sim_name)  # Optional CSV save
 
-    # read log_0.csv and plot radius
-    data = np.genfromtxt(sim_dir + "/log_0.csv", delimiter=",", skip_header=2)
-    plt.plot(data[:, 1], data[:, 2])
-    # plot reference circle with radius R
-    theta = np.linspace(0, 2 * np.pi, 100)
-    plt.plot(R * np.cos(theta), R * np.sin(theta))
-    plt.savefig(sim_dir + "/path.jpg")
-    plt.close()
+    debug_plots = True
+    if debug_plots:
+        # read log_0.csv and plot radius
+        data = np.genfromtxt(sim_dir + "/log_0.csv", delimiter=",", skip_header=2)
+        plt.plot(data[:, 1], data[:, 2])
+        # plot reference circle with radius R
+        theta = np.linspace(0, 2 * np.pi, 100)
+        plt.plot(R * np.cos(theta), R * np.sin(theta))
+        plt.plot(TARGET_POS[:, 0], TARGET_POS[:, 1])
+        plt.legend(["Drone", "Reference", "Target"])
+        plt.savefig(sim_dir + "/path.jpg")
+        plt.close()
+        plt.close()
+        plt.close()
 
-    plt.plot(data[:, 0], np.sqrt(data[:, 1] **2 + data[:, 2] **2))
-    plt.xlabel("Time (s)")
-    plt.ylabel("Radius (arb. units)")
-    plt.savefig(sim_dir + "/radius.jpg")
+        radius = np.sqrt(data[:, 1] **2 + data[:, 2] **2)
+        plt.plot(data[:, 0], radius)
+        plt.xlabel("Time (s)")
+        plt.ylabel("Radius (arb. units)")
+        plt.savefig(sim_dir + "/radius.jpg")
 
     #### Plot the simulation results ###########################
     if plot:
