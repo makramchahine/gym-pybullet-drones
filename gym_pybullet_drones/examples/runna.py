@@ -60,13 +60,23 @@ DEFAULT_AGGREGATE = True
 DEFAULT_OBSTACLES = True
 DEFAULT_SIMULATION_FREQ_HZ = 240
 DEFAULT_CONTROL_FREQ_HZ = 120
-DEFAULT_DURATION_SEC = 20
-DEFAULT_OUTPUT_FOLDER = 'results'
+DEFAULT_DURATION_SEC = 60
+DEFAULT_OUTPUT_FOLDER = 'cl_v5'
 DEFAULT_COLAB = False
 # DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/val/params.json'
 # DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-199_val-loss:0.0009_train-loss:0.0010_mse:0.0010_2023:05:17:12:02:55.hdf5'
-DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v1/val/params.json'
-DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v1/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-098_val-loss:0.0008_train-loss:0.0009_mse:0.0009_2023:06:08:09:32:34.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v2/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v2/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-100_val-loss:0.0006_train-loss:0.0006_mse:0.0006_2023:06:08:18:05:37.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v3/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v3/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-099_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:09:12:12:39.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v4/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v4/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-099_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:09:18:03:46.hdf5'
+DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v5/val/params.json'
+DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v5/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-098_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:10:17:21:33.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v6/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v6/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-100_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:11:00:10:06.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v7/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v7/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-100_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:11:09:01:33.hdf5'
 
 def run(
         drone=DEFAULT_DRONES,
@@ -99,14 +109,14 @@ def run(
     #### Initialize the simulation #############################
     H = .1
     R = .5
-    sim_name = "run-flight-" + datetime.now().strftime("%m.%d.%Y_%H.%M.%S")
+    sim_name = "run-flight-" + datetime.now().strftime("%m.%d.%Y_%H.%M.%S.%f")
     sim_dir = os.path.join(output_folder, sim_name)
     if not os.path.exists(sim_dir):
         os.makedirs(sim_dir + '/')
 
     # make initial positions and orientations of drones centered around a circle of radius R and height H around the origin (0,0,0)
-    # Theta = random.random() * 2 * np.pi
-    Theta = 0.0
+    Theta = random.random() * 2 * np.pi
+    # Theta = 0.0
     Theta0 = Theta - np.pi
     INIT_XYZS = np.array([[R * np.cos(Theta), R * np.sin(Theta), H]])
     INIT_RPYS = np.array([[0, 0, Theta0]])
@@ -198,7 +208,7 @@ def run(
                 # else:
                 #     value = np.array([0, 1])
                 #  randomly select [0,1] or [1,0] for value every 1/10 of STEPS
-                if i % (STEPS/10) == 0:
+                if i % (STEPS/2) == 0:
                     hazzak = np.random.randint(2, size=1)
                     if hazzak[0] == 1:
                         value = np.array([0, 1])
@@ -270,10 +280,14 @@ def run(
     plt.savefig(sim_dir + "/path.jpg")
     plt.close()
 
-    plt.plot(time_data, np.sqrt(x_data **2 + y_data **2))
+    radius = np.sqrt(x_data **2 + y_data **2)
+    plt.plot(time_data, radius)
     plt.xlabel("Time (s)")
     plt.ylabel("Radius (arb. units)")
     plt.savefig(sim_dir + "/radius.jpg")
+    # save the radius as a csv
+    with open(sim_dir + "/radius.csv", 'wb') as out_file:
+        np.savetxt(out_file, radius, delimiter=",")
 
     #### Plot the simulation results ###########################
     if plot:

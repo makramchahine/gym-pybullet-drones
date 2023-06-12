@@ -50,7 +50,7 @@ DEFAULT_OBSTACLES = True
 DEFAULT_SIMULATION_FREQ_HZ = 240
 DEFAULT_CONTROL_FREQ_HZ = 240
 DEFAULT_DURATION_SEC = 20
-DEFAULT_OUTPUT_FOLDER = 'train_v6'
+DEFAULT_OUTPUT_FOLDER = 'train_v7'
 DEFAULT_COLAB = False
 
 deviation_mode = "initial_deviation" # "random_walk" or "initial_deviation"
@@ -102,8 +102,11 @@ def run(
         SWITCH_WP = random.randint(int(np.floor(NUM_WP / 4)), int(np.floor(3 * NUM_WP / 4))) # when to switch directions (left or right)
     else:
         SWITCH_WP = NUM_WP + 2 # never switch directions
+    if random.random() < 0.5:
+        DEVIATION_A = random.uniform(0.8, 1.2) # initial deviation from the circular trajectory
+    else:
+        DEVIATION_A = 1
     RECOVERY_WP = random.randint(int(np.floor(NUM_WP / 4)), int(np.floor(3 * NUM_WP / 4))) # when to recover from the deviation (achieve the desired radius)
-    DEVIATION_A = random.uniform(0.8, 1.2) # initial deviation from the circular trajectory
 
     # Forward pass
     for i in range(NUM_WP):

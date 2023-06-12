@@ -1,5 +1,5 @@
 #!/bin/bash
-N=300 # number of runs
+N=299 # number of runs
 P=16 # number of processes
 
 program="python culekta.py --plot False --gui False"
