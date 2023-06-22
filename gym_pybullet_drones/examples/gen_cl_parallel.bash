@@ -1,5 +1,5 @@
 #!/bin/bash
-N=32 # number of runs
+N=$1 # number of runs
 P=16 # number of processes
 
 program="python runna.py --plot False --gui False"
