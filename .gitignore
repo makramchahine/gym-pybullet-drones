@@ -11,6 +11,10 @@ tmp/
 
 # Learning results
 experiments/learning/results/save-*
+gym_pybullet_drones/examples/train_v*/
+gym_pybullet_drones/examples/cl*_v*/
+gym_pybullet_drones/examples/replay_*/
+gym_pybullet_drones/examples/archive/
 
 # macOS users
 .DS_Store

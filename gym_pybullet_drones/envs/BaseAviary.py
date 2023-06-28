@@ -615,7 +615,7 @@ class BaseAviary(gym.Env):
 
         """
         if img_type == ImageType.RGB:
-            (Image.fromarray(img_input.astype('uint8'), 'RGBA')).save(os.path.join(path,"frame_"+str(frame_num)+".png"))
+            (Image.fromarray(img_input.astype('uint8'), 'RGBA')).save(os.path.join(path,str(frame_num).zfill(8)+".png"))
         elif img_type == ImageType.DEP:
             temp = ((img_input-np.min(img_input)) * 255 / (np.max(img_input)-np.min(img_input))).astype('uint8')
         elif img_type == ImageType.SEG:
@@ -626,7 +626,9 @@ class BaseAviary(gym.Env):
             print("[ERROR] in BaseAviary._exportImage(), unknown ImageType")
             exit()
         if img_type != ImageType.RGB:
-            (Image.fromarray(temp)).save(os.path.join(path,"frame_"+str(frame_num)+".png"))
+            # same saving as below but with a 6 zero padded frame numbering
+            # (Image.fromarray(temp)).save(os.path.join(path,"frame_"+str(frame_num)+".png"))
+            (Image.fromarray(temp)).save(os.path.join(path,str(frame_num).zfill(6)+".png"))
 
     ################################################################################
 
@@ -945,22 +947,23 @@ class BaseAviary(gym.Env):
         p.loadURDF("samurai.urdf",
                    physicsClientId=self.CLIENT
                    )
-        p.loadURDF("duck_vhacd.urdf",
-                   [0.0, 0.0, 0.0],
-                   p.getQuaternionFromEuler([np.pi/2, 0, 0]),
-                   physicsClientId=self.CLIENT,
-                   globalScaling=4.0
-                   )
+        # p.loadURDF("duck_vhacd.urdf",
+        #            [0.0, 0.0, 0.0],
+        #            p.getQuaternionFromEuler([np.pi/2, 0, 0]),
+        #            physicsClientId=self.CLIENT,
+        #            globalScaling=4.0
+        #            )
         # p.loadURDF("cube_no_rotation.urdf",
         #            [-.5, -2.5, .5],
         #            p.getQuaternionFromEuler([0, 0, 0]),
         #            physicsClientId=self.CLIENT
         #            )
-        # p.loadURDF("sphere2.urdf",
-        #            [0, 2, .5],
-        #            p.getQuaternionFromEuler([0,0,0]),
-        #            physicsClientId=self.CLIENT
-        #            )
+        p.loadURDF("sphere2red.urdf",
+                   [0, 0, 0.1],
+                   p.getQuaternionFromEuler([0,0,0]),
+                   physicsClientId=self.CLIENT,
+                   globalScaling=0.2
+                   )
     
     ################################################################################
     

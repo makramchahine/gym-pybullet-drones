@@ -44,9 +44,9 @@ from gym_pybullet_drones.utils.utils import sync, str2bool
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(SCRIPT_DIR, "..", "..", ".."))
-from drone_communication.utils.model_utils import load_model_from_weights, generate_hidden_list, get_readable_name, \
+from drone_multimodal.utils.model_utils import load_model_from_weights, generate_hidden_list, get_readable_name, \
     get_params_from_json
-from drone_communication.keras_models import IMAGE_SHAPE
+from drone_multimodal.keras_models import IMAGE_SHAPE
 
 DEFAULT_DRONES = DroneModel("cf2x")
 DEFAULT_NUM_DRONES = 1
@@ -59,9 +59,9 @@ DEFAULT_USER_DEBUG_GUI = False
 DEFAULT_AGGREGATE = True
 DEFAULT_OBSTACLES = True
 DEFAULT_SIMULATION_FREQ_HZ = 240
-DEFAULT_CONTROL_FREQ_HZ = 120
+DEFAULT_CONTROL_FREQ_HZ = 64
 DEFAULT_DURATION_SEC = 60
-DEFAULT_OUTPUT_FOLDER = 'cl_v5'
+DEFAULT_OUTPUT_FOLDER = 'cl2_v11_fast_init_pp_1s_big'
 DEFAULT_COLAB = False
 # DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/val/params.json'
 # DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-199_val-loss:0.0009_train-loss:0.0010_mse:0.0010_2023:05:17:12:02:55.hdf5'
@@ -71,12 +71,64 @@ DEFAULT_COLAB = False
 # DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v3/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-099_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:09:12:12:39.hdf5'
 # DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v4/val/params.json'
 # DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v4/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-099_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:09:18:03:46.hdf5'
-DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v5/val/params.json'
-DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v5/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-098_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:10:17:21:33.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v5/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v5/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-098_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:10:17:21:33.hdf5'
 # DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v6/val/params.json'
 # DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v6/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-100_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:11:00:10:06.hdf5'
 # DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v7/val/params.json'
 # DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v7/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-100_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:11:09:01:33.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v8/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v8/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-098_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:12:11:19:34.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v9/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v9/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-100_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:12:16:19:33.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v9_aug/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v9_aug/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-099_val-loss:0.0004_train-loss:0.0009_mse:0.0009_2023:06:13:17:37:22.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v9_aug_split/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v9_aug_split/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-097_val-loss:0.0002_train-loss:0.0005_mse:0.0005_2023:06:13:23:49:00.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v9_aug_split_v2/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v9_aug_split_v2/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-097_val-loss:0.0001_train-loss:0.0003_mse:0.0003_2023:06:14:08:35:57.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v10/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v10/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-099_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:12:23:45:46.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-099_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:14:12:09:26.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_early/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_early/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-098_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:19:11:41:35.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_p/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_p/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-088_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:16:11:46:04.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fp_early/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fp_early/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-089_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:16:23:41:17.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fpp_early_400/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fpp_early_400/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-400_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:19:23:58:40.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fpp_early_800/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fpp_early_800/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-399_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:20:09:18:08.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_big/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_big/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-100_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:14:17:41:01.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_64/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_64/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-098_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:15:07:51:58.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/random_walk/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/random_walk/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-097_val-loss:0.0006_train-loss:0.0010_mse:0.0010_2023:06:15:19:15:13.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/base/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/base/val/model-ctrnn_wiredcfccell_seq-64_lr-0.001000_epoch-100_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:21:07:34:44.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/base_ss/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/base_ss/val/model-ctrnn_wiredcfccell_seq-1_lr-0.001000_epoch-013_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:21:10:40:38.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/base_ss_1000/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/base_ss_1000/val/model-ctrnn_wiredcfccell_seq-1_lr-0.001000_epoch-334_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:21:11:09:21.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_early_ss/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_early_ss/val/model-ctrnn_wiredcfccell_seq-1_lr-0.001000_epoch-017_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:21:11:53:06.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fpp_early_ss/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fpp_early_ss/val/model-ctrnn_wiredcfccell_seq-1_lr-0.001000_epoch-097_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:21:12:16:13.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fast/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fast/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-100_val-loss:0.0003_train-loss:0.0006_mse:0.0006_2023:06:22:13:45:15.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fast_init/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fast_init/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-095_val-loss:0.0007_train-loss:0.0008_mse:0.0008_2023:06:22:16:33:55.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fast_init_pp/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fast_init_pp/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-098_val-loss:0.0004_train-loss:0.0007_mse:0.0007_2023:06:22:18:46:02.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fast_init_pp_big/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fast_init_pp_big/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-098_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:23:10:44:01.hdf5'
+DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fast_init_pp_1s_big/val/params.json'
+DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v11_fast_init_pp_1s_big/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-095_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:26:02:01:40.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v12/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v12/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-086_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:22:10:27:14.hdf5'
 
 def run(
         drone=DEFAULT_DRONES,
@@ -181,6 +233,8 @@ def run(
     time_data = []
     x_data = []
     y_data = []
+    radius_data = []
+    theta_data = []
 
     for i in trange(0, int(STEPS), AGGR_PHY_STEPS):
 
@@ -201,20 +255,12 @@ def run(
 
                 rgb = rgb[None,:,:,0:3]
 
-                # if i<STEPS/3:
-                #     value = np.array([0, 1])
-                # elif i<2*STEPS/3:
-                #     value = np.array([1, 0])
-                # else:
-                #     value = np.array([0, 1])
-                #  randomly select [0,1] or [1,0] for value every 1/10 of STEPS
-                if i % (STEPS/2) == 0:
-                    hazzak = np.random.randint(2, size=1)
-                    if hazzak[0] == 1:
-                        value = np.array([0, 1])
-                    else:
-                        value = np.array([1, 0])
-                    value = value[None,:]
+                value = np.array([1, 0])
+                value = value[None,:]
+                # if i % (STEPS/2) == 0:
+                #     hazzak = np.random.randint(2, size=1)
+                #     value = np.array([0, 1]) if hazzak[0] == 1 else np.array([1, 0])
+                #     value = value[None,:]
 
                 # if first image run it through network a 100 times to get a good estimate of the hidden state
                 if i == 0:
@@ -254,6 +300,9 @@ def run(
                 time_data.append(CTRL_EVERY_N_STEPS * env.TIMESTEP * i)
                 x_data.append(state[0])
                 y_data.append(state[1])
+                # radius_data.append(vel_cmd[4])
+                # theta_data.append(vel_cmd[5])
+
                 # logger.log(drone=j,
                 #            timestamp=int(i / CTRL_EVERY_N_STEPS),
                 #            state=obs[str(j)]["state"],
@@ -282,12 +331,21 @@ def run(
 
     radius = np.sqrt(x_data **2 + y_data **2)
     plt.plot(time_data, radius)
+    # plt.plot(time_data, radius_data)
     plt.xlabel("Time (s)")
     plt.ylabel("Radius (arb. units)")
+    # plt.legend(["Actual", "Predicted"])
     plt.savefig(sim_dir + "/radius.jpg")
     # save the radius as a csv
     with open(sim_dir + "/radius.csv", 'wb') as out_file:
         np.savetxt(out_file, radius, delimiter=",")
+
+    # plt.close()
+    # plt.close()
+    # plt.plot(time_data, theta_data)
+    # plt.xlabel("Time (s)")
+    # plt.ylabel("Theta Deviation (radians)")
+    # plt.savefig(sim_dir + "/theta.jpg")
 
     #### Plot the simulation results ###########################
     if plot:

@@ -49,8 +49,9 @@ DEFAULT_AGGREGATE = True
 DEFAULT_OBSTACLES = True
 DEFAULT_SIMULATION_FREQ_HZ = 240
 DEFAULT_CONTROL_FREQ_HZ = 240
+DEFAULT_RECORD_FREQ_HZ = 60
 DEFAULT_DURATION_SEC = 20
-DEFAULT_OUTPUT_FOLDER = 'train_v11_fast'
+DEFAULT_OUTPUT_FOLDER = 'replay_debug_base' # 'train_v11_fast_init_pp_60hz'
 DEFAULT_COLAB = False
 
 deviation_mode = "initial_deviation" # "random_walk" or "initial_deviation"
@@ -68,6 +69,7 @@ def run(
         obstacles=DEFAULT_OBSTACLES,
         simulation_freq_hz=DEFAULT_SIMULATION_FREQ_HZ,
         control_freq_hz=DEFAULT_CONTROL_FREQ_HZ,
+        record_freq_hz=DEFAULT_RECORD_FREQ_HZ,
         duration_sec=DEFAULT_DURATION_SEC,
         output_folder=DEFAULT_OUTPUT_FOLDER,
         colab=DEFAULT_COLAB
@@ -83,69 +85,77 @@ def run(
         os.makedirs(sim_dir + '/')
 
     # make initial positions and orientations of drones centered around a circle of radius R and height H around the origin (0,0,0)
-    Theta = random.random() * 2 * np.pi
+    Theta = 0 #random.random() * 2 * np.pi
     Theta0 = Theta - np.pi
-    Delta_Theta0 = random.choice([-np.pi * 0.175, np.pi * 0.175])
+    Delta_Theta0 = 0 #random.choice([-np.pi * 0.175, np.pi * 0.175])
     INIT_XYZS = np.array([[R * np.cos(Theta), R * np.sin(Theta), H]])
     INIT_RPYS = np.array([[0, 0, Theta0 + Delta_Theta0]])
     AGGR_PHY_STEPS = int(simulation_freq_hz / control_freq_hz) if aggregate else 1
 
     #### Initialize a circular trajectory ######################
     PERIOD = random.randint(16, 24) # * 8
-    NUM_WP = control_freq_hz * PERIOD
-    TARGET_POS = np.zeros((NUM_WP, 3))
-    TARGET_ATT = np.zeros((NUM_WP, 3))
+    ACTIVE_WP = control_freq_hz * PERIOD
+    INIT_WP = int(0 * ACTIVE_WP)
+    TARGET_POS = np.zeros((ACTIVE_WP + INIT_WP, 3))
+    TARGET_ATT = np.zeros((ACTIVE_WP + INIT_WP, 3))
     # random number taking values -1 or 1, indicating initial direction
     sign = 1 #random.choice([-1, 1])
-    
-    # SPEED = 2 * np.pi * R / PERIOD # orbital speed of the drone
-    # VELS_RELATIVE_TO_DRONE = sign * SPEED / 10 * 0
-    # TARGET_VELS = np.zeros((NUM_WP, 3))
 
     # stochastic parameters
     if random.random() < -1:
-        SWITCH_WP = random.randint(int(np.floor(NUM_WP / 4)), int(np.floor(3 * NUM_WP / 4))) # when to switch directions (left or right)
+        SWITCH_WP = random.randint(int(np.floor(ACTIVE_WP / 4)), int(np.floor(3 * ACTIVE_WP / 4))) # when to switch directions (left or right)
     else:
-        SWITCH_WP = NUM_WP + 2 # never switch directions
+        SWITCH_WP = ACTIVE_WP + 2 # never switch directions
 
     DEVIATION_A = random.uniform(0.8, 1.2) # initial deviation from the circular trajectory
 
-    RECOVERY_WP = random.randint(int(np.floor(NUM_WP / 2)), int(np.floor(NUM_WP))) # when to recover from the deviation (achieve the desired radius)
-    RECOVERY_ANGLE_WP = random.randint(int(np.floor(NUM_WP / 2)), int(np.floor(NUM_WP))) # when to recover from the angle deviation (achieve the desired radius)
+    RECOVERY_WP = random.randint(int(np.floor(ACTIVE_WP / 2)), int(np.floor(ACTIVE_WP))) # when to recover from the deviation (achieve the desired radius)
+    RECOVERY_ANGLE_WP = random.randint(int(np.floor(ACTIVE_WP / 2)), int(np.floor(ACTIVE_WP))) # when to recover from the angle deviation (achieve the desired radius)
 
     # Forward pass
-    for i in range(NUM_WP):
-        # Handle deviation from radius
-        if i < RECOVERY_WP:
-            adj_R = R * (1 + (((RECOVERY_WP - i) / RECOVERY_WP)) * (DEVIATION_A - 1))
-            # adj_R = R * (1 + (((RECOVERY_WP - i) / RECOVERY_WP)) ** 2 * (DEVIATION_A - 1))
-        else:
-            adj_R = R
+    for i in range(ACTIVE_WP + INIT_WP):
+        if i < INIT_WP:
+            adj_R = R * DEVIATION_A
+            adj_Delta_Theta = Delta_Theta0
 
-        if i < RECOVERY_ANGLE_WP:
-            adj_Delta_Theta = Delta_Theta0 * (((RECOVERY_ANGLE_WP - i) / RECOVERY_ANGLE_WP))
-        else:
-            adj_Delta_Theta = 0
-
-        # Handle switching directions
-        if i < SWITCH_WP:
             TARGET_POS[i, :] = (
-                adj_R * np.cos((sign * i / NUM_WP) * (2 * np.pi) + Theta), 
-                adj_R * np.sin((sign * i / NUM_WP) * (2 * np.pi) + Theta),
+                adj_R * np.cos((sign * i / ACTIVE_WP) * (2 * np.pi) + Theta), 
+                adj_R * np.sin((sign * i / ACTIVE_WP) * (2 * np.pi) + Theta),
                 0
             )
-            TARGET_ATT[i, :] = 0, 0, (sign * i / NUM_WP) * (2 * np.pi) + Theta0 + adj_Delta_Theta
+            TARGET_ATT[i, :] = 0, 0, (sign * i / ACTIVE_WP) * (2 * np.pi) + Theta0 + adj_Delta_Theta
         else:
-            TARGET_POS[i, :] = (
-                adj_R * np.cos((sign * (2 * SWITCH_WP - i) / NUM_WP) * (2 * np.pi) + Theta),
-                adj_R * np.sin((sign * (2 * SWITCH_WP - i) / NUM_WP) * (2 * np.pi) + Theta),
-                0
-            )
-            TARGET_ATT[i, :] = 0, 0, (sign * (2 * SWITCH_WP - i) / NUM_WP) * (2 * np.pi) + Theta0 + adj_Delta_Theta
-        # theta_pos = np.arctan2(TARGET_POS[i, 1], TARGET_POS[i, 0])
-        # TARGET_VELS[i, :] = -np.cos(theta_pos) * VELS_RELATIVE_TO_DRONE, np.sin(theta_pos) * VELS_RELATIVE_TO_DRONE, 0
+            adj_i = i - INIT_WP
+            # Handle deviation from radius
+            if adj_i < RECOVERY_WP:
+                # adj_R = R * (1 + (((RECOVERY_WP - adj_i) / RECOVERY_WP)) * (DEVIATION_A - 1))
+                adj_R = R * (1 + (((RECOVERY_WP - adj_i) / RECOVERY_WP)) ** 2 * (DEVIATION_A - 1))
+            else:
+                adj_R = R
 
-    wp_counters = np.array([int((i * NUM_WP / 6) % NUM_WP) for i in range(num_drones)])
+            if adj_i < RECOVERY_ANGLE_WP:
+                # adj_Delta_Theta = Delta_Theta0 * (((RECOVERY_ANGLE_WP - adj_i) / RECOVERY_ANGLE_WP))
+                adj_Delta_Theta = Delta_Theta0 * (((RECOVERY_ANGLE_WP - adj_i) / RECOVERY_ANGLE_WP)) ** 2
+            else:
+                adj_Delta_Theta = 0
+
+            # Handle switching directions
+            if adj_i < SWITCH_WP:
+                TARGET_POS[i, :] = (
+                    adj_R * np.cos((sign * i / ACTIVE_WP) * (2 * np.pi) + Theta), 
+                    adj_R * np.sin((sign * i / ACTIVE_WP) * (2 * np.pi) + Theta),
+                    0
+                )
+                TARGET_ATT[i, :] = 0, 0, (sign * i / ACTIVE_WP) * (2 * np.pi) + Theta0 + adj_Delta_Theta
+            else:
+                TARGET_POS[i, :] = (
+                    adj_R * np.cos((sign * (2 * SWITCH_WP - adj_i) / ACTIVE_WP) * (2 * np.pi) + Theta),
+                    adj_R * np.sin((sign * (2 * SWITCH_WP - adj_i) / ACTIVE_WP) * (2 * np.pi) + Theta),
+                    0
+                )
+                TARGET_ATT[i, :] = 0, 0, (sign * (2 * SWITCH_WP - adj_i) / ACTIVE_WP) * (2 * np.pi) + Theta0 + adj_Delta_Theta
+
+    wp_counters = np.array([int((i * (ACTIVE_WP + INIT_WP) / 6) % (ACTIVE_WP + INIT_WP)) for i in range(num_drones)])
 
     #### Create the environment with or without video capture ##
     if vision:
@@ -195,19 +205,16 @@ def run(
 
     #### Run the simulation ####################################
     CTRL_EVERY_N_STEPS = int(np.floor(env.SIM_FREQ / control_freq_hz)) # 1
-    REC_EVERY_N_STEPS = int(np.floor(env.SIM_FREQ / 8 )) #30 #240
+    REC_EVERY_N_STEPS = int(np.floor(env.SIM_FREQ / record_freq_hz )) #30 #240
     action = {str(i): np.array([0, 0, 0, 0]) for i in range(num_drones)}
     START = time.time()
-    STEPS = CTRL_EVERY_N_STEPS * NUM_WP
+    STEPS = int(CTRL_EVERY_N_STEPS * ACTIVE_WP)
+    INIT_STEPS = int(CTRL_EVERY_N_STEPS * INIT_WP)
     # STEPS = CTRL_EVERY_N_STEPS * (max(RECOVERY_WP, RECOVERY_ANGLE_WP) + 1) # early
     LABEL = []
 
-    for i in trange(0, int(STEPS), AGGR_PHY_STEPS):
-        # print(f"CTRL_EVERY_N_STEPS: {CTRL_EVERY_N_STEPS}")
-        # print(f"REC_EVERY_N_STEPS: {REC_EVERY_N_STEPS}")
-        # print(f"STEPS: {STEPS}")
-        # print(f"AGGR_PHY_STEPS: {AGGR_PHY_STEPS}")
-        
+    actions = []
+    for i in trange(0, int(STEPS + INIT_STEPS), AGGR_PHY_STEPS):
         #### Step the simulation ###################################
         obs, reward, done, info = env.step(action)
 
@@ -221,33 +228,33 @@ def run(
                     control_timestep=CTRL_EVERY_N_STEPS * env.TIMESTEP,
                     state=state,
                     target_pos=np.hstack([TARGET_POS[wp_counters[j], 0:2], INIT_XYZS[j, 2]]),
-                    # target_vel=state[10:13],
-                    # target_vel=TARGET_VELS[i, :],
                     target_rpy=np.hstack([INIT_RPYS[j, 0:2], TARGET_ATT[wp_counters[j], 2]]),
                     )
 
             #### Go to the next way point and loop #####################
             for j in range(num_drones):
-                wp_counters[j] = wp_counters[j] + 1 if wp_counters[j] < (NUM_WP - 1) else 0
+                wp_counters[j] = wp_counters[j] + 1 if wp_counters[j] < (ACTIVE_WP + INIT_WP - 1) else 0
 
 
-        if i % REC_EVERY_N_STEPS == 0 and i>env.SIM_FREQ:
+        if i % REC_EVERY_N_STEPS == 0 and i>env.SIM_FREQ and i>=INIT_STEPS:
+            adj_i = i - INIT_STEPS
             rgb, dep, seg = env._getDroneImages(0)
             env._exportImage(img_type=ImageType.RGB,
                              img_input=rgb,
                              path=sim_dir,
-                             frame_num=int(i / REC_EVERY_N_STEPS),
+                             frame_num=int(adj_i / REC_EVERY_N_STEPS),
                              )
+            actions.append(action[str(j)])
             ### Log the simulation ####################################
             for j in range(num_drones):
                 logger.log(drone=j,
-                           timestamp=int(i / REC_EVERY_N_STEPS),
+                           timestamp=int(adj_i / REC_EVERY_N_STEPS),
                            state=obs[str(j)]["state"],
                            control=np.hstack(
                                [TARGET_POS[wp_counters[j], 0:2], INIT_XYZS[j, 2], INIT_RPYS[j, :], np.zeros(6)])
                            )
 
-                if wp_counters[j] < SWITCH_WP:
+                if wp_counters[j] < SWITCH_WP + INIT_WP:
                     LABEL.append(sign)
                 else:
                     LABEL.append(-sign)
@@ -286,6 +293,11 @@ def run(
         ax.set_xlabel("Time (s)")
         ax.set_ylabel("Radius (arb. units)")
         fig.savefig(sim_dir + "/radius.jpg")
+
+    csv_data = np.array(actions, dtype=np.float32)
+    csv_header = "t1,t2,t3,t4"
+    np.savetxt(os.path.join(output_folder, "torques.csv"), csv_data, delimiter=",", header=csv_header, comments="", fmt="%f")
+
 
     #### Plot the simulation results ###########################
     if plot:

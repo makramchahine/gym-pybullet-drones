@@ -134,7 +134,7 @@ class Logger(object):
                 np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 0:12, :]])), delimiter=",")
                 # write the header
                 out_file.seek(0)
-                out_file.write(b'time_total,att_x,att_y,att_z,vx,vy,vz,roll,pitch,yaw,ang_vel_x,ang_vel_y,ang_vel_z\n')
+                out_file.write(b'time_total,x,y,z,vx,vy,vz,roll,pitch,yaw,roll_rate,pitch_rate,yaw_rate\n')
             # with open(csv_dir+"/x"+str(i)+".csv", 'wb') as out_file:
             #     np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 0, :]])), delimiter=",")
             # with open(csv_dir+"/y"+str(i)+".csv", 'wb') as out_file:
