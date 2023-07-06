@@ -32,6 +32,7 @@ from scipy.signal import butter, filtfilt
 from gym_pybullet_drones.utils.enums import DroneModel, Physics, ImageType
 from gym_pybullet_drones.envs.CtrlAviary import CtrlAviary
 from gym_pybullet_drones.envs.VisionAviary import VisionAviary
+from gym_pybullet_drones.envs.VelocityAviary import VelocityAviary
 from gym_pybullet_drones.control.DSLPIDControl import DSLPIDControl
 from gym_pybullet_drones.control.SimplePIDControl import SimplePIDControl
 from gym_pybullet_drones.utils.Logger import Logger
@@ -49,9 +50,9 @@ DEFAULT_AGGREGATE = True
 DEFAULT_OBSTACLES = True
 DEFAULT_SIMULATION_FREQ_HZ = 240
 DEFAULT_CONTROL_FREQ_HZ = 240
-DEFAULT_RECORD_FREQ_HZ = 60
-DEFAULT_DURATION_SEC = 20
-DEFAULT_OUTPUT_FOLDER = 'replay_debug_base' # 'train_v11_fast_init_pp_60hz'
+DEFAULT_RECORD_FREQ_HZ = 8
+DEFAULT_DURATION_SEC = 40
+DEFAULT_OUTPUT_FOLDER = f'train_v13_fast_1r_big_{DEFAULT_RECORD_FREQ_HZ}' # 'train_v11_fast_init_pp_60hz'
 DEFAULT_COLAB = False
 
 deviation_mode = "initial_deviation" # "random_walk" or "initial_deviation"
@@ -77,7 +78,7 @@ def run(
     #### Initialize the simulation #############################
     H = .1
     H_STEP = .05
-    R = .5
+    R = 1.0
     sim_name = "save-flight-" + datetime.now().strftime("%m.%d.%Y_%H.%M.%S.%f") # include milliseconds in save name for parallel runs
 
     sim_dir = os.path.join(output_folder, sim_name)
@@ -85,29 +86,30 @@ def run(
         os.makedirs(sim_dir + '/')
 
     # make initial positions and orientations of drones centered around a circle of radius R and height H around the origin (0,0,0)
-    Theta = 0 #random.random() * 2 * np.pi
+    Theta = random.random() * 2 * np.pi
     Theta0 = Theta - np.pi
-    Delta_Theta0 = 0 #random.choice([-np.pi * 0.175, np.pi * 0.175])
+    Delta_Theta0 = random.choice([-np.pi * 0.175, np.pi * 0.175])
     INIT_XYZS = np.array([[R * np.cos(Theta), R * np.sin(Theta), H]])
     INIT_RPYS = np.array([[0, 0, Theta0 + Delta_Theta0]])
     AGGR_PHY_STEPS = int(simulation_freq_hz / control_freq_hz) if aggregate else 1
 
     #### Initialize a circular trajectory ######################
-    PERIOD = random.randint(16, 24) # * 8
+    # PERIOD = random.randint(16, 24) # * 8
+    PERIOD = random.randint(16 * 2, 24 * 2) # * 8
     ACTIVE_WP = control_freq_hz * PERIOD
     INIT_WP = int(0 * ACTIVE_WP)
     TARGET_POS = np.zeros((ACTIVE_WP + INIT_WP, 3))
     TARGET_ATT = np.zeros((ACTIVE_WP + INIT_WP, 3))
     # random number taking values -1 or 1, indicating initial direction
-    sign = 1 #random.choice([-1, 1])
+    sign = random.choice([-1, 1])
 
     # stochastic parameters
-    if random.random() < -1:
+    if random.random() < 0.5:
         SWITCH_WP = random.randint(int(np.floor(ACTIVE_WP / 4)), int(np.floor(3 * ACTIVE_WP / 4))) # when to switch directions (left or right)
     else:
         SWITCH_WP = ACTIVE_WP + 2 # never switch directions
 
-    DEVIATION_A = random.uniform(0.8, 1.2) # initial deviation from the circular trajectory
+    DEVIATION_A = random.uniform(0.5, 1.5) # initial deviation from the circular trajectory
 
     RECOVERY_WP = random.randint(int(np.floor(ACTIVE_WP / 2)), int(np.floor(ACTIVE_WP))) # when to recover from the deviation (achieve the desired radius)
     RECOVERY_ANGLE_WP = random.randint(int(np.floor(ACTIVE_WP / 2)), int(np.floor(ACTIVE_WP))) # when to recover from the angle deviation (achieve the desired radius)
@@ -128,14 +130,14 @@ def run(
             adj_i = i - INIT_WP
             # Handle deviation from radius
             if adj_i < RECOVERY_WP:
-                # adj_R = R * (1 + (((RECOVERY_WP - adj_i) / RECOVERY_WP)) * (DEVIATION_A - 1))
-                adj_R = R * (1 + (((RECOVERY_WP - adj_i) / RECOVERY_WP)) ** 2 * (DEVIATION_A - 1))
+                adj_R = R * (1 + (((RECOVERY_WP - adj_i) / RECOVERY_WP)) * (DEVIATION_A - 1))
+                # adj_R = R * (1 + (((RECOVERY_WP - adj_i) / RECOVERY_WP)) ** 2 * (DEVIATION_A - 1))
             else:
                 adj_R = R
 
             if adj_i < RECOVERY_ANGLE_WP:
-                # adj_Delta_Theta = Delta_Theta0 * (((RECOVERY_ANGLE_WP - adj_i) / RECOVERY_ANGLE_WP))
-                adj_Delta_Theta = Delta_Theta0 * (((RECOVERY_ANGLE_WP - adj_i) / RECOVERY_ANGLE_WP)) ** 2
+                adj_Delta_Theta = Delta_Theta0 * (((RECOVERY_ANGLE_WP - adj_i) / RECOVERY_ANGLE_WP))
+                # adj_Delta_Theta = Delta_Theta0 * (((RECOVERY_ANGLE_WP - adj_i) / RECOVERY_ANGLE_WP)) ** 2
             else:
                 adj_Delta_Theta = 0
 
@@ -149,8 +151,8 @@ def run(
                 TARGET_ATT[i, :] = 0, 0, (sign * i / ACTIVE_WP) * (2 * np.pi) + Theta0 + adj_Delta_Theta
             else:
                 TARGET_POS[i, :] = (
-                    adj_R * np.cos((sign * (2 * SWITCH_WP - adj_i) / ACTIVE_WP) * (2 * np.pi) + Theta),
-                    adj_R * np.sin((sign * (2 * SWITCH_WP - adj_i) / ACTIVE_WP) * (2 * np.pi) + Theta),
+                    adj_R * np.cos((sign * (2 * SWITCH_WP - adj_i + INIT_WP) / ACTIVE_WP) * (2 * np.pi) + Theta),
+                    adj_R * np.sin((sign * (2 * SWITCH_WP - adj_i + INIT_WP) / ACTIVE_WP) * (2 * np.pi) + Theta),
                     0
                 )
                 TARGET_ATT[i, :] = 0, 0, (sign * (2 * SWITCH_WP - adj_i) / ACTIVE_WP) * (2 * np.pi) + Theta0 + adj_Delta_Theta
@@ -212,6 +214,8 @@ def run(
     INIT_STEPS = int(CTRL_EVERY_N_STEPS * INIT_WP)
     # STEPS = CTRL_EVERY_N_STEPS * (max(RECOVERY_WP, RECOVERY_ANGLE_WP) + 1) # early
     LABEL = []
+
+    env.reset()
 
     actions = []
     for i in trange(0, int(STEPS + INIT_STEPS), AGGR_PHY_STEPS):
@@ -294,9 +298,9 @@ def run(
         ax.set_ylabel("Radius (arb. units)")
         fig.savefig(sim_dir + "/radius.jpg")
 
-    csv_data = np.array(actions, dtype=np.float32)
-    csv_header = "t1,t2,t3,t4"
-    np.savetxt(os.path.join(output_folder, "torques.csv"), csv_data, delimiter=",", header=csv_header, comments="", fmt="%f")
+    # csv_data = np.array(actions, dtype=np.float32)
+    # csv_header = "t1,t2,t3,t4"
+    # np.savetxt(os.path.join(output_folder, "torques.csv"), csv_data, delimiter=",", header=csv_header, comments="", fmt="%f")
 
 
     #### Plot the simulation results ###########################

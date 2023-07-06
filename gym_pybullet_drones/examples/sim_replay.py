@@ -59,14 +59,14 @@ DEFAULT_USER_DEBUG_GUI = False
 DEFAULT_AGGREGATE = True
 DEFAULT_OBSTACLES = True
 DEFAULT_SIMULATION_FREQ_HZ = 240
-DEFAULT_CONTROL_FREQ_HZ = 60 #int(240/8)
+DEFAULT_CONTROL_FREQ_HZ = 8 #int(240/8)
 DEFAULT_DURATION_SEC = 20
-DEFAULT_OUTPUT_FOLDER = 'replay_debug_base'
+DEFAULT_OUTPUT_FOLDER = 'replay_debug'
 DEFAULT_COLAB = False
 # DEFAULT_CSV_PATH = f'{DEFAULT_OUTPUT_FOLDER}/data_out.csv'
-# DEFAULT_CSV_PATH = f'/home/makramchahine/repos/drone_multimodal/clean_replay_debug_base/save-flight-06.27.2023_15.07.06.384563/data_out.csv'
-DEFAULT_CSV_PATH = f'/home/makramchahine/repos/gym-pybullet-drones/gym_pybullet_drones/examples/replay_debug_base/torques.csv'
-mod = "torque"
+DEFAULT_CSV_PATH = f'/home/makramchahine/repos/drone_multimodal/clean_replay_debug_base/save-flight-06.27.2023_15.07.06.384563/data_out.csv'
+# DEFAULT_CSV_PATH = f'/home/makramchahine/repos/gym-pybullet-drones/gym_pybullet_drones/examples/replay_debug_base/torques.csv'
+mod = "gt2"
 
 def run(
         drone=DEFAULT_DRONES,
@@ -166,6 +166,7 @@ def run(
     counter = 0
 
     waypoints = []
+    compounded_waypoints = []
     control_inputs = []
     vels_states = []
     yaw_states = []
@@ -204,34 +205,41 @@ def run(
 
             # convert from body_frame to world_frame + integrate for target waypoint position
             # waypoint = out2way(vel_cmd, state, 1/control_freq_hz)
-            # waypoint = out2way(vel_cmd, state, 1/simulation_freq_hz)
-            # waypoints.append(waypoint[0:2])
+            fake_state = state.copy()
+            if len(waypoints) > 0:
+                fake_state[0:2] = compounded_waypoints[-1][0:2]
+            waypoint = out2way(vel_cmd, state, 1/simulation_freq_hz).copy()
+            compound_waypoint = out2way(vel_cmd, fake_state, 1/simulation_freq_hz).copy()
+            waypoints.append(waypoint[0:2])
+            compounded_waypoints.append(compound_waypoint[0:2])
             ixigrec.append(state[0:2])
             control_inputs.append(vel_cmd)
             yaw_states.append(state[9])
 
             vel_state = state[10:13].copy()
-            # convert from world_frame to body_frame
-            vel_state[0] = vel_state[0] * np.cos(state[9]) - vel_state[1] * np.sin(state[9])
-            vel_state[1] = vel_state[0] * np.sin(state[9]) + vel_state[1] * np.cos(state[9])
+            # convert from body_frame to world_frame
+            # vel_state[0] = vel_state[0] * np.cos(state[9]) - vel_state[1] * np.sin(state[9])
+            # vel_state[1] = vel_state[0] * np.sin(state[9]) + vel_state[1] * np.cos(state[9])
             vels_states.append(vel_state)
 
-            # # TODO: replay with dumped torque powers - check environment
+            # # Done: replay with dumped torque powers - check environment
             # # TODO: play around computeControl to match torque powers
             # # TODO: look into drone environment initialization
-            # # look at dyn
-            # # look at documentation
-            # # look at usage of compute control  ``
-            # action[str(j)], _, _ = ctrl[j].computeControl(control_timestep=env.TIMESTEP, # * CTRL_EVERY_N_STEPS,
-            #                                                 cur_pos=state[0:3],
-            #                                                 cur_quat=state[3:7],
-            #                                                 cur_vel=state[10:13],
-            #                                                 cur_ang_vel=state[13:16],
-            #                                                 target_pos=state[0:3],  # same as the current position
-            #                                                 target_rpy=np.array([0, 0, state[9]]),  # keep current yaw
-            #                                                 target_vel=vel_cmd[0:3],
-            #                                                 target_rpy_rates = np.array([0, 0, vel_cmd[3]])
-            # )
+            # # TODO: look at dyn
+            # # TODO: look at documentation
+            # # TODO: look at usage of compute control  ``
+            action[str(j)], _, _ = ctrl[j].computeControl(control_timestep=env.TIMESTEP, # * CTRL_EVERY_N_STEPS,
+                                                            cur_pos=state[0:3],
+                                                            cur_quat=state[3:7],
+                                                            cur_vel=state[10:13],
+                                                            cur_ang_vel=state[13:16],
+                                                            target_pos=state[0:3],  # same as the current position
+                                                            target_rpy=np.array([0, 0, state[9]]),  # keep current yaw
+                                                            target_vel=vel_cmd[0:3],
+                                                            target_rpy_rates = np.array([0, 0, vel_cmd[3]])
+            )
+            # action[str(j)] = vel_cmd.copy()
+            # action[str(j)][3] = 0.5
             # print(f"action: {action[str(j)]}")
 
             logger.log(drone=j,
@@ -261,19 +269,19 @@ def run(
     # save a plot of the waypoints (column 0 vs column 1, square axis)
     # overlay a plot of ixigrec with same layout in different color
     # make both plots have increasing marker size with index
-    fig, axs = plt.subplots(1, 2)
+    fig, axs = plt.subplots(1, 3)
     t = np.linspace(0, 1, len(ixigrec))  # time variable
 
     from matplotlib.collections import LineCollection
     from matplotlib.colors import ListedColormap, BoundaryNorm
-    def plot_color_line(fig, ax, x, y, t):
+    def plot_color_line(fig, ax, x, y, t, color="viridis"):
         # Create a set of line segments
         points = np.array([x, y]).T.reshape(-1, 1, 2)
         segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
         # Create a continuous norm to map from data points to colors
         norm = plt.Normalize(t.min(), t.max())
-        lc = LineCollection(segments, cmap='viridis', norm=norm)
+        lc = LineCollection(segments, cmap=color, norm=norm)
         # Set the values used for colormapping
         lc.set_array(t)
         lc.set_linewidth(2)
@@ -282,20 +290,21 @@ def run(
         fig.colorbar(line, ax=ax)
 
     plot_color_line(fig, axs[0], np.array(ixigrec)[:, 0], np.array(ixigrec)[:, 1], t)
-    # plot_color_line(fig, axs[1], np.array(waypoints)[:, 0], np.array(waypoints)[:, 1], t)
-    min_x = np.array(ixigrec)[:, 0].min()
-    # min_x = min(np.array(ixigrec)[:, 0].min(), np.array(waypoints)[:, 0].min())
-    max_x = np.array(ixigrec)[:, 0].max()
-    # max_x = max(np.array(ixigrec)[:, 0].max(), np.array(waypoints)[:, 0].max())
-    min_y = np.array(ixigrec)[:, 1].min()
-    # min_y = min(np.array(ixigrec)[:, 1].min(), np.array(waypoints)[:, 1].min())
-    max_y = np.array(ixigrec)[:, 1].max()
-    # max_y = max(np.array(ixigrec)[:, 1].max(), np.array(waypoints)[:, 1].max())
-    for ax in axs:
+    plot_color_line(fig, axs[1], np.array(waypoints)[:, 0], np.array(waypoints)[:, 1], t)
+    plot_color_line(fig, axs[2], np.array(compounded_waypoints)[:, 0], np.array(compounded_waypoints)[:, 1], t, "plasma")
+    min_x = min(np.array(ixigrec)[:, 0].min(), np.array(waypoints)[:, 0].min(), np.array(compounded_waypoints)[:, 0].min())
+    max_x = max(np.array(ixigrec)[:, 0].max(), np.array(waypoints)[:, 0].max(), np.array(compounded_waypoints)[:, 0].max())
+    min_y = min(np.array(ixigrec)[:, 1].min(), np.array(waypoints)[:, 1].min(), np.array(compounded_waypoints)[:, 1].min())
+    max_y = max(np.array(ixigrec)[:, 1].max(), np.array(waypoints)[:, 1].max(), np.array(compounded_waypoints)[:, 1].max())
+    # min_x = np.array(ixigrec)[:, 0].min()
+    # max_x = np.array(ixigrec)[:, 0].max()
+    # min_y = np.array(ixigrec)[:, 1].min()
+    # max_y = np.array(ixigrec)[:, 1].max()
+    for ax in axs[:2]:
         ax.set_xlim(min_x, max_x)
         ax.set_ylim(min_y, max_y)
     axs[0].legend(["drone"])
-    # axs[1].legend(["waypoints"])
+    axs[1].legend(["waypoints", "compounded waypoints"], loc="lower right")
 
     # axs[0].scatter(np.array(ixigrec)[:, 0], np.array(ixigrec)[:, 1], c=t, cmap='viridis')
     # im = axs[1].scatter(np.array(waypoints)[:, 0], np.array(waypoints)[:, 1], c=t, cmap='viridis')
@@ -320,21 +329,32 @@ def run(
     # #fig.savefig(f'{output_folder}/vels_{control_freq_hz}.png')
     # fig.savefig(f'{output_folder}/vels_{mod}_{simulation_freq_hz}_{control_freq_hz}.png')
 
-    # plt subfigure with 2 rows and 1 column
-    fig, axs = plt.subplots(4, 2, figsize=(7.5, 10))
-    axs = axs.flatten()
-
     vels_states = np.array(vels_states)
     yaw_states = np.array(yaw_states)
     control_inputs = np.array(control_inputs)
-    axs[0].plot(control_inputs[:, 0], label="vx_true")
-    axs[1].plot(control_inputs[:, 1], label="vy_true")
-    axs[2].plot(control_inputs[:, 2], label="vz_true")
-    axs[3].plot(control_inputs[:, 3], label="omega_z_true")
-    axs[0+4].plot(vels_states[:, 0], label="vx_state")
-    axs[1+4].plot(vels_states[:, 1], label="vy_state")
-    axs[2+4].plot(vels_states[:, 2], label="vz_state")
-    axs[3+4].plot(yaw_states, label="yaw_state")
+    if mod == "torque":
+        fig, axs = plt.subplots(4, 2, figsize=(7.5, 10))
+        axs = axs.flatten()
+        axs[0].plot(control_inputs[:, 0], label="t0")
+        axs[1].plot(control_inputs[:, 1], label="t1")
+        axs[2].plot(control_inputs[:, 2], label="t2")
+        axs[3].plot(control_inputs[:, 3], label="t3")
+        axs[0+4].plot(vels_states[:, 0], label="vx_state")
+        axs[1+4].plot(vels_states[:, 1], label="vy_state")
+        axs[2+4].plot(vels_states[:, 2], label="vz_state")
+        axs[3+4].plot(yaw_states, label="yaw_state")
+    else:
+        fig, axs = plt.subplots(2, 2, figsize=(7.5, 5))
+        axs = axs.flatten()
+        axs[0].plot(control_inputs[:, 0], label="vx_true")
+        axs[1].plot(control_inputs[:, 1], label="vy_true")
+        axs[2].plot(control_inputs[:, 2], label="vz_true")
+        axs[3].plot(control_inputs[:, 3], label="omega_z_true")
+        axs[0].plot(vels_states[:, 0], label="vx_state")
+        axs[1].plot(vels_states[:, 1], label="vy_state")
+        axs[2].plot(vels_states[:, 2], label="vz_state")
+        axs[3].plot(yaw_states, label="yaw_state")
+
 
     fig.suptitle(f"Control Powers and States @ {simulation_freq_hz}:{control_freq_hz}Hz")
     axs[3].set_xlabel("frame")
@@ -343,10 +363,6 @@ def run(
     axs[1].legend()
     axs[2].legend()
     axs[3].legend()
-    axs[0+4].legend()
-    axs[1+4].legend()
-    axs[2+4].legend()
-    axs[3+4].legend()
     fig.savefig(f'{output_folder}/vels_{mod}_{simulation_freq_hz}_{control_freq_hz}.png')
 
 
