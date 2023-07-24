@@ -52,7 +52,7 @@ DEFAULT_SIMULATION_FREQ_HZ = 240
 DEFAULT_CONTROL_FREQ_HZ = 240
 DEFAULT_RECORD_FREQ_HZ = 8
 DEFAULT_DURATION_SEC = 40
-DEFAULT_OUTPUT_FOLDER = f'train_v13_fast_1r_big_{DEFAULT_RECORD_FREQ_HZ}' # 'train_v11_fast_init_pp_60hz'
+DEFAULT_OUTPUT_FOLDER = f'train_v13_fast_1r_big_{DEFAULT_RECORD_FREQ_HZ}_750' # 'train_v11_fast_init_pp_60hz'
 DEFAULT_COLAB = False
 
 deviation_mode = "initial_deviation" # "random_walk" or "initial_deviation"

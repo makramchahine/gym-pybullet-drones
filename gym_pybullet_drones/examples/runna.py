@@ -63,7 +63,7 @@ DEFAULT_CONTROL_FREQ_HZ = 240
 DEFAULT_SAMPLING_FREQ_HQ = 8
 DEFAULT_DURATION_SEC = 60
 random_deviation = True
-DEFAULT_OUTPUT_FOLDER = f'cl2_v13_fast_big_fix_rd_{DEFAULT_SAMPLING_FREQ_HQ}'
+DEFAULT_OUTPUT_FOLDER = f'cl2_v13_fast_1r_big_fix_rd_{DEFAULT_SAMPLING_FREQ_HQ}_500'
 DEFAULT_COLAB = False
 # DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/val/params.json'
 # DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-199_val-loss:0.0009_train-loss:0.0010_mse:0.0010_2023:05:17:12:02:55.hdf5'
@@ -143,14 +143,18 @@ DEFAULT_COLAB = False
 # DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v12_fast_init_pp_8_big/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-098_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:06:30:07:22:32.hdf5'
 # DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v12_fast_init_pp_8/val/params.json'
 # DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v12_fast_init_pp_8/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-100_val-loss:0.0005_train-loss:0.0007_mse:0.0007_2023:06:29:17:24:55.hdf5'
-DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v13_fast_8_big/val/params.json'
-DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v13_fast_8_big/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-099_val-loss:0.0001_train-loss:0.0001_mse:0.0001_2023:07:03:11:57:44.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v13_fast_8_big/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v13_fast_8_big/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-099_val-loss:0.0001_train-loss:0.0001_mse:0.0001_2023:07:03:11:57:44.hdf5'
 # DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v13_fast_init_pp_8_big/val/params.json'
 # DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v13_fast_init_pp_8_big/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-099_val-loss:0.0011_train-loss:0.0006_mse:0.0006_2023:06:30:12:00:27.hdf5'
 # DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v13_fast_pp_big_8/val/params.json'
 # DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v13_fast_pp_big_8/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-098_val-loss:0.0001_train-loss:0.0001_mse:0.0001_2023:07:05:13:32:24.hdf5'
 # DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v13_fast_1r_big_8/val/params.json'
 # DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v13_fast_1r_big_8/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-139_val-loss:0.0000_train-loss:0.0000_mse:0.0000_2023:07:05:23:43:27.hdf5'
+DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v13_fast_1r_big_8_500/val/params.json'
+DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v13_fast_1r_big_8_500/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-147_val-loss:0.0000_train-loss:0.0001_mse:0.0001_2023:07:07:01:03:22.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v13_fast_1r_big_2/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/init_deviation_v13_fast_1r_big_2/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-150_val-loss:0.0001_train-loss:0.0001_mse:0.0001_2023:07:06:09:44:53.hdf5'
 
 def run(
         drone=DEFAULT_DRONES,
@@ -182,7 +186,7 @@ def run(
 
     #### Initialize the simulation #############################
     H = .1
-    R_base = 0.5
+    R_base = 1.0
     R = R_base * random.uniform(0.5, 1.5) if random_deviation else R_base
     sim_name = "run-flight-" + datetime.now().strftime("%m.%d.%Y_%H.%M.%S.%f")
     sim_dir = os.path.join(output_folder, sim_name)
@@ -434,7 +438,7 @@ def run(
         vel_cmd = np.array(vel_cmd).astype(np.float)
     
         for i, (title, ax) in enumerate(zip(["vx_pred", "vy_pred", "vz_pred", "yaw_rate_pred"], axs)):
-            ax.plot(vel_cmd[:,i], label=title)
+            ax.plot(vel_cmd[:,i+1], label=title)
 
     vels_states_body = np.array(vels_states_body)
     yaw_states = np.array(yaw_states)
