@@ -3,6 +3,7 @@ from gym import spaces
 
 from gym_pybullet_drones.envs.BaseAviary import BaseAviary
 from gym_pybullet_drones.utils.enums import DroneModel, Physics
+import pybullet as p
 
 class CtrlAviary(BaseAviary):
     """Multi-drone environment class for control applications."""
@@ -22,7 +23,8 @@ class CtrlAviary(BaseAviary):
                  record=False,
                  obstacles=False,
                  user_debug_gui=True,
-                 output_folder='results'
+                 output_folder='results',
+                 custom_obj_location = None
                  ):
         """Initialization of an aviary environment for control applications.
 
@@ -54,6 +56,7 @@ class CtrlAviary(BaseAviary):
             Whether to draw the drones' axes and the GUI RPMs sliders.
 
         """
+        self.CUSTOM_OBJECT_LOCATION = custom_obj_location
         super().__init__(drone_model=drone_model,
                          num_drones=num_drones,
                          neighbourhood_radius=neighbourhood_radius,
@@ -70,6 +73,45 @@ class CtrlAviary(BaseAviary):
                          )
 
     ################################################################################
+
+    def _addObstacles(self):
+        """Add obstacles to the environment.
+
+        These obstacles are loaded from standard URDF files included in Bullet.
+
+        """
+        p.loadURDF("samurai.urdf",
+                   physicsClientId=self.CLIENT
+                   )
+        if self.CUSTOM_OBJECT_LOCATION is None:
+            p.loadURDF("sphere2red.urdf",
+                       [0, 0, 0.1],
+                       p.getQuaternionFromEuler([0,0,0]),
+                       physicsClientId=self.CLIENT,
+                       globalScaling=0.2
+                       )
+        # if self.CUSTOM_OBJECT_LOCATION is a list of tuples:
+        elif type(self.CUSTOM_OBJECT_LOCATION) is list and type(self.CUSTOM_OBJECT_LOCATION[0]) is tuple:
+            # for obj in self.CUSTOM_OBJECT_LOCATION:
+            p.loadURDF("sphere2blue.urdf",
+                    [*self.CUSTOM_OBJECT_LOCATION[0], 0.1],
+                    p.getQuaternionFromEuler([0,0,0]),
+                    physicsClientId=self.CLIENT,
+                    globalScaling=0.2
+                    )
+            p.loadURDF("sphere2red.urdf",
+                    [*self.CUSTOM_OBJECT_LOCATION[1], 0.1],
+                    p.getQuaternionFromEuler([0,0,0]),
+                    physicsClientId=self.CLIENT,
+                    globalScaling=0.2
+                    )
+        else:
+            p.loadURDF("sphere2red.urdf",
+                   [*self.CUSTOM_OBJECT_LOCATION, 0.1],
+                   p.getQuaternionFromEuler([0,0,0]),
+                   physicsClientId=self.CLIENT,
+                   globalScaling=0.2
+                   )
 
     def _actionSpace(self):
         """Returns the action space of the environment.
