@@ -40,7 +40,7 @@ from gym_pybullet_drones.utils.Logger import Logger
 from gym_pybullet_drones.utils.utils import sync, str2bool
 
 DEFAULT_DRONES = DroneModel("cf2x")
-DEFAULT_NUM_DRONES = 1
+DEFAULT_NUM_DRONES = 2
 DEFAULT_PHYSICS = Physics("pyb")
 DEFAULT_VISION = False
 DEFAULT_GUI = True
@@ -53,7 +53,7 @@ DEFAULT_SIMULATION_FREQ_HZ = 240
 DEFAULT_CONTROL_FREQ_HZ = 240
 DEFAULT_RECORD_FREQ_HZ = 8
 DEFAULT_DURATION_SEC = 40
-DEFAULT_OUTPUT_FOLDER = f'train_o2_single_aug3_{DEFAULT_RECORD_FREQ_HZ}' # 'train_v11_fast_init_pp_60hz'
+DEFAULT_OUTPUT_FOLDER = f'train_o2_aug3_noback_{DEFAULT_RECORD_FREQ_HZ}' # 'train_v11_fast_init_pp_60hz'
 DEFAULT_COLAB = False
 aligned_follower = True
 
@@ -104,10 +104,10 @@ def run(
     Theta0 = Theta # drone faces the direction of theta
     early_stop = False
     two_step = False
-    if random.random() < 0.2:
-        OBJ_START_DIST = random.uniform(0.15, 0.4)
-    else:
-        OBJ_START_DIST = random.uniform(1, 3)
+    # if random.random() < 0.2:
+    #     OBJ_START_DIST = random.uniform(0.15, 0.4)
+    # else:
+    OBJ_START_DIST = random.uniform(1, 3)
     # if random.random() < 0.8:
     #     early_stop = True
     obj_dist_from_axis_1 = random.uniform(0.2, 0.8)
@@ -117,8 +117,8 @@ def run(
     left_right = True if random.random() < 0.5 else False
     rel_obj_l = (OBJ_START_DIST, obj_dist_from_axis_1) if left_right else (OBJ_START_DIST, -obj_dist_from_axis_2)
     rel_obj_f = (OBJ_START_DIST, -obj_dist_from_axis_2) if left_right else (OBJ_START_DIST, obj_dist_from_axis_1)
-    # obj_starting_positions = [(OBJ_START_DIST, y) for y in [-0.5, 0.5]]
-    # rel_drone_f = (0, 0)
+    obj_starting_positions = [(OBJ_START_DIST, y) for y in [-0.5, 0.5]]
+    rel_drone_f = (0, 0)
     rel_drone_l = (-0.5, 0)
     
     # objects by skin: zebra, red, transparent
@@ -129,16 +129,16 @@ def run(
 
 
     # target locations: leader, follower
-    # target_locations = [rel_obj_l, rel_obj_f]
-    target_locations = [rel_obj_l]
+    target_locations = [rel_obj_l, rel_obj_f]
+    # target_locations = [rel_obj_l] # for single drone
     spawn_order = [rel_obj_l, rel_obj_f] if leader_goes_blue else [rel_obj_f, rel_obj_l]
 
-    FINAL_THETA = [angle_between_two_points(rel_drone_l, rel_obj_l)]
-    INIT_XYZS = np.array([[*convert_to_global(rel_pos, Theta), H] for rel_pos in [rel_drone_l]])
-    INIT_RPYS = np.array([[0, 0, Theta0] for d in range(num_drones)])
-    # FINAL_THETA = [angle_between_two_points(rel_drone_l, rel_obj_l), angle_between_two_points(rel_drone_f, rel_obj_f)]
-    # INIT_XYZS = np.array([[*convert_to_global(rel_pos, Theta), H] for rel_pos in [rel_drone_l, rel_drone_f]])
-    # INIT_RPYS = np.array([[0, 0, Theta0], [0, 0, Theta]]) if aligned_follower else np.array([[0, 0, Theta0] for d in range(num_drones)])
+    # FINAL_THETA = [angle_between_two_points(rel_drone_l, rel_obj_l)]
+    # INIT_XYZS = np.array([[*convert_to_global(rel_pos, Theta), H] for rel_pos in [rel_drone_l]])
+    # INIT_RPYS = np.array([[0, 0, Theta0] for d in range(num_drones)])
+    FINAL_THETA = [angle_between_two_points(rel_drone_l, rel_obj_l), angle_between_two_points(rel_drone_f, rel_obj_f)]
+    INIT_XYZS = np.array([[*convert_to_global(rel_pos, Theta), H] for rel_pos in [rel_drone_l, rel_drone_f]])
+    INIT_RPYS = np.array([[0, 0, Theta0], [0, 0, Theta]]) if aligned_follower else np.array([[0, 0, Theta0] for d in range(num_drones)])
     TARGET_LOCATIONS = [convert_to_global(rel_pos, Theta) for rel_pos in target_locations]
     SPAWN_ORDER = [convert_to_global(rel_pos, Theta) for rel_pos in spawn_order]
     AGGR_PHY_STEPS = int(simulation_freq_hz / control_freq_hz) if aggregate else 1

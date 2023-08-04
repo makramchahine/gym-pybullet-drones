@@ -51,7 +51,7 @@ from drone_multimodal.utils.model_utils import load_model_from_weights, generate
 from drone_multimodal.keras_models import IMAGE_SHAPE
 
 DEFAULT_DRONES = DroneModel("cf2x")
-DEFAULT_NUM_DRONES = 1
+DEFAULT_NUM_DRONES = 2
 DEFAULT_PHYSICS = Physics("pyb")
 DEFAULT_VISION = False
 DEFAULT_GUI = True
@@ -65,15 +65,35 @@ DEFAULT_CONTROL_FREQ_HZ = 240
 DEFAULT_SAMPLING_FREQ_HQ = 8
 DEFAULT_DURATION_SEC = 40
 random_deviation = False
-DEFAULT_OUTPUT_FOLDER = f'cl_o2_single_aug3_noback_2rnn_{DEFAULT_SAMPLING_FREQ_HQ}_300_100'
+DEFAULT_OUTPUT_FOLDER = f'cl_o2_aug3_noback_norm_2rnn_{DEFAULT_SAMPLING_FREQ_HQ}_300_300'
 # DEFAULT_OUTPUT_FOLDER = f'cl_o2_single_aug2_hold_2step_2rnn_{DEFAULT_SAMPLING_FREQ_HQ}_300_100'
 DEFAULT_COLAB = False
 aligned_follower = True
 normalize_path = None
-# normalize_path = '/home/makramchahine/repos/drone_multimodal/clean_train_o2_single_aug3_noback_norm_8/mean_std.csv'
+normalize_path = '/home/makramchahine/repos/drone_multimodal/clean_train_o2_aug3_noback_norm_8/mean_std.csv'
 # normalize_path = '/home/makramchahine/repos/drone_multimodal/clean_train_o2_single_aug2_hold_2step_norm_8/mean_std.csv'
-DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_single_aug3_noback_2rnn_8_300_100/val/params.json'
-DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_single_aug3_noback_2rnn_8_300_100/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-060_val-loss:0.0001_train-loss:0.0001_mse:0.0001_2023:08:02:17:42:39.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_noback_norm_2rnn_comm1_8_300_200/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_noback_norm_2rnn_comm1_8_300_200/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-199_val-loss:0.0052_train-loss:0.0050_mse:0.0050_2023:08:04:01:02:21.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_noback_norm_1rnn_comm_8_300_300/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_noback_norm_1rnn_comm_8_300_300/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-297_val-loss:0.0032_train-loss:0.0030_mse:0.0030_2023:08:04:01:00:44.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_noback_norm_1rnn_comm_8_300_200/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_noback_norm_1rnn_comm_8_300_200/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-199_val-loss:0.0045_train-loss:0.0044_mse:0.0044_2023:08:03:17:41:53.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_noback_norm_2rnn_comm_8_300_200/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_noback_norm_2rnn_comm_8_300_200/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-193_val-loss:0.0064_train-loss:0.0061_mse:0.0061_2023:08:03:17:30:57.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_noback_norm_2rnn_comm_8_300_100/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_noback_norm_2rnn_comm_8_300_100/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-099_val-loss:0.0113_train-loss:0.0088_mse:0.0088_2023:08:03:14:11:24.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_noback_nc_norm_2rnn_8_300_200/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_noback_nc_norm_2rnn_8_300_200/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-197_val-loss:0.0044_train-loss:0.0043_mse:0.0043_2023:08:03:10:52:51.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_noback_nc_norm_2rnn_8_300_100/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_noback_nc_norm_2rnn_8_300_100/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-098_val-loss:0.0098_train-loss:0.0084_mse:0.0084_2023:08:03:10:51:21.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_norm_2rnn_8_300_300/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_norm_2rnn_8_300_300/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-299_val-loss:0.0065_train-loss:0.0035_mse:0.0035_2023:08:03:01:56:46.hdf5'
+DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_noback_norm_2rnn_8_300_300/val/params.json'
+DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_noback_norm_2rnn_8_300_300/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-290_val-loss:0.0034_train-loss:0.0024_mse:0.0024_2023:08:03:02:28:22.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_norm_2rnn_8_300_100/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_aug3_norm_2rnn_8_300_100/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-098_val-loss:0.0139_train-loss:0.0191_mse:0.0191_2023:08:02:22:05:11.hdf5'
+# DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_single_aug3_norm_2rnn_8_300_200/val/params.json'
+# DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_single_aug3_norm_2rnn_8_300_200/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-196_val-loss:0.0447_train-loss:0.0346_mse:0.0346_2023:08:02:21:21:30.hdf5'
 # DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_single_aug3_noback_norm_2rnn_8_300_100/val/params.json'
 # DEFAULT_CHECKPOINT_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_single_aug3_noback_norm_2rnn_8_300_100/val/model-ctrnn_wiredcfccell_seq-64_lr-0.000410_epoch-091_val-loss:0.0176_train-loss:0.0261_mse:0.0261_2023:08:02:17:48:04.hdf5'
 # DEFAULT_PARAMS_PATH = '/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o2_single_aug2_hold_2step_2rnn_norm_8_300_100/val/params.json'
@@ -144,6 +164,8 @@ def run(
     model_params.single_step = True
     single_step_model = load_model_from_weights(model_params, checkpoint_path)
     hiddens = generate_hidden_list(model=single_step_model, return_numpy=True)
+    all_comms = []
+    # print(f'hiddens: {[h.shape for h in hiddens]}')
     if normalize_path is not None:
         df_norm = pd.read_csv(normalize_path, index_col=0)
         np_mean = df_norm.iloc[0].to_numpy()
@@ -168,25 +190,27 @@ def run(
     Theta0 = Theta # drone faces the direction of theta
     OBJ_START_DIST = random.uniform(1, 2)
 
-    leader_goes_zebra = True if random.random() < 0.5 else False
+    leader_goes_blue = True if random.random() < 0.5 else False
+    left_right = True if random.random() < 0.5 else False
     rel_obj_a = (OBJ_START_DIST, 0.5)
     rel_obj_b = (OBJ_START_DIST, -0.5)
-    rel_obj_l = rel_obj_a if leader_goes_zebra else rel_obj_b
-    rel_obj_f = rel_obj_b if leader_goes_zebra else rel_obj_a
-    # rel_drone_f = (0, 0)
+    rel_obj_l = rel_obj_a if left_right else rel_obj_b
+    rel_obj_f = rel_obj_b if left_right else rel_obj_a
+    rel_drone_f = (0, 0)
     rel_drone_l = (-0.5, 0)
+    SPAWN_ORDER = [rel_obj_l, rel_obj_f] if leader_goes_blue else [rel_obj_f, rel_obj_l]
 
     # if i % (STEPS // 2) == 0:
     #     ran_val = np.random.choice([-1, 1])
-    value = np.array([0, 1]) if not leader_goes_zebra else np.array([1, 0])
+    value = np.array([0, 1]) if not leader_goes_blue else np.array([1, 0])
     value = value[None,:]
     labels = []
 
-    INIT_XYZS = np.array([[*convert_to_global(rel_pos, Theta), H] for rel_pos in [rel_drone_l]])
-    INIT_RPYS = np.array([[0, 0, Theta0] for d in range(num_drones)])
-    # INIT_XYZS = np.array([[*convert_to_global(rel_pos, Theta), H] for rel_pos in [rel_drone_l, rel_drone_f]])
-    # INIT_RPYS = np.array([[0, 0, Theta0], [0, 0, Theta]]) if aligned_follower else np.array([[0, 0, Theta0] for d in range(num_drones)])
-    CUSTOM_OBJECT_LOCATIONS = [convert_to_global(rel_pos, Theta) for rel_pos in [rel_obj_l, rel_obj_f]]
+    # INIT_XYZS = np.array([[*convert_to_global(rel_pos, Theta), H] for rel_pos in [rel_drone_l]])
+    # INIT_RPYS = np.array([[0, 0, Theta0] for d in range(num_drones)])
+    INIT_XYZS = np.array([[*convert_to_global(rel_pos, Theta), H] for rel_pos in [rel_drone_l, rel_drone_f]])
+    INIT_RPYS = np.array([[0, 0, Theta0], [0, 0, Theta]]) if aligned_follower else np.array([[0, 0, Theta0] for d in range(num_drones)])
+    CUSTOM_OBJECT_LOCATIONS = [convert_to_global(rel_pos, Theta) for rel_pos in SPAWN_ORDER]
     AGGR_PHY_STEPS = int(simulation_freq_hz / control_freq_hz) if aggregate else 1
     NUM_WP = control_freq_hz * DEFAULT_DURATION_SEC
 
@@ -279,12 +303,13 @@ def run(
                 out[0][0] = out[0][0] * np_std + np_mean
             vel_cmd = out[0][0]  # shape: 1 x 8
             vel_cmds[0] = copy.deepcopy(vel_cmd[:4])
-            # vel_cmds[1] = copy.deepcopy(vel_cmd[4:])
-            # comms = out[1]
-            hiddens = out[1:]  # list num_hidden long, each el is batch x hidden_dim
+            vel_cmds[1] = copy.deepcopy(vel_cmd[4:])
+            comms = out[1]
+            all_comms.append(comms)
+            hiddens = out[2:]  # list num_hidden long, each el is batch x hidden_dim
             # print([hiddens[i].shape for i in range(len(hiddens))])
             vel_cmd_world = copy.deepcopy(vel_cmds)
-            labels.append(1 if leader_goes_zebra else -1)
+            labels.append(1 if leader_goes_blue else -1)
 
             for d in range(num_drones):
                 # print(f"start vel_cmd: {vel_cmd_world}")
@@ -353,6 +378,10 @@ def run(
     #### Save the simulation results ###########################
     logger.save_as_csv(sim_name)  # Optional CSV save
 
+    # save all comms as npy
+    all_comms = np.array(all_comms).squeeze()
+    np.save(sim_dir + '/comms.npy', all_comms)
+
     from matplotlib.collections import LineCollection
     def plot_color_line(fig, ax, x, y, t, color="viridis", alpha=1.0):
         # Create a set of line segments
@@ -373,7 +402,7 @@ def run(
     time_data, x_data, y_data = np.array(time_data), np.array(x_data), np.array(y_data)
     fig, ax = plt.subplots()
     ax.plot(x_data[0], y_data[0])
-    # ax.plot(x_data[1], y_data[1])
+    ax.plot(x_data[1], y_data[1])
     for target in CUSTOM_OBJECT_LOCATIONS:
         ax.plot(target[0], target[1], 'ro')
     # t = np.linspace(0, 1, len(x_data))  # time variable
@@ -397,10 +426,10 @@ def run(
 
     # plot radius over time
     radius_leader = np.sqrt(x_data[0] **2 + y_data[0] **2)
-    # radius_follower = np.sqrt(x_data[1] **2 + y_data[1] **2)
+    radius_follower = np.sqrt(x_data[1] **2 + y_data[1] **2)
     fig, ax = plt.subplots()
     ax.plot(time_data, radius_leader)
-    # ax.plot(time_data, radius_follower)
+    ax.plot(time_data, radius_follower)
     ax.set_xlabel("Time (step)")
     ax.set_ylabel("Radius (arb. units)")
     ax.set_title(f"Radius vs time @ {DEFAULT_SAMPLING_FREQ_HQ}Hz")
@@ -408,8 +437,8 @@ def run(
     # save the radius as a csv
     with open(sim_dir + "/radiusL.csv", 'wb') as out_file:
         np.savetxt(out_file, radius_leader, delimiter=",")
-    # with open(sim_dir + "/radiusF.csv", 'wb') as out_file:
-    #     np.savetxt(out_file, radius_follower, delimiter=",")
+    with open(sim_dir + "/radiusF.csv", 'wb') as out_file:
+        np.savetxt(out_file, radius_follower, delimiter=",")
 
     #### Plot the simulation results ###########################
     if plot:
