@@ -53,7 +53,7 @@ DEFAULT_SIMULATION_FREQ_HZ = 240
 DEFAULT_CONTROL_FREQ_HZ = 240
 DEFAULT_RECORD_FREQ_HZ = 8
 DEFAULT_DURATION_SEC = 40
-DEFAULT_OUTPUT_FOLDER = f'train_o2_aug4_rand_{DEFAULT_RECORD_FREQ_HZ}' # 'train_v11_fast_init_pp_60hz'
+DEFAULT_OUTPUT_FOLDER = f'train_o3_switch_redo2_{DEFAULT_RECORD_FREQ_HZ}' # 'train_v11_fast_init_pp_60hz'
 DEFAULT_COLAB = False
 aligned_follower = True
 
@@ -100,6 +100,7 @@ def run(
     def angle_between_two_points(source_coord, target_coord):
         return np.arctan2(target_coord[1] - source_coord[1], target_coord[0] - source_coord[0])
 
+    num_objects = 3
     Theta = random.random() * 2 * np.pi
     Theta0 = Theta # drone faces the direction of theta
     early_stop = False
@@ -107,52 +108,52 @@ def run(
     # if random.random() < 0.2:
     #     OBJ_START_DIST = random.uniform(0.15, 0.4)
     # else:
-    OBJ_START_DIST = random.uniform(1.5, 3)
     # if random.random() < 0.8:
     #     early_stop = True
-    obj_dist_from_axis_1 = random.uniform(0.2, 0.7)
-    obj_dist_from_axis_2 = random.uniform(0.2, 0.7)
+
+    OBJ_START_DIST = random.uniform(1.5, 3)
     RAND_SWITCH_TIME = random.randint(30, 40)
+    switch = True #True if random.random() < 0.8 else False
 
-    switch = True if random.random() < 0.8 else False
-    leader_goes_blue = True if random.random() < 0.5 else False
-    left_right = True if random.random() < 0.5 else False
-    rel_obj_l = (OBJ_START_DIST, obj_dist_from_axis_1) if left_right else (OBJ_START_DIST, -obj_dist_from_axis_2)
-    rel_obj_f = (OBJ_START_DIST, -obj_dist_from_axis_2) if left_right else (OBJ_START_DIST, obj_dist_from_axis_1)
-    obj_starting_positions = [(OBJ_START_DIST, y) for y in [-0.5, 0.5]]
-    rel_drone_f = (0, 0)
-    rel_drone_l = (-0.5, 0)
+    # Note: arrays are ordered by [Leader, Follower, Follower, ...]
     
-    # objects by skin: zebra, red, transparent
-    # obj_spawn_order = random.shuffle(obj_starting_positions)
+    # Default object locations (3 options) i.e. [left, center, right]
+    default_obj_locs_labels = ['L', 'C', 'R']
+    default_obj_locs = [(OBJ_START_DIST, lateral_obj_dist) for lateral_obj_dist in [random.uniform(0.3, 0.7), random.uniform(-0.1, 0.1), random.uniform(-0.3, -0.7)]]
+    # Sample Left/Center/Right locations of objects e.g. [right, center, left]
+    sampled_obj_locs_labels = random.sample(default_obj_locs_labels, num_objects)
+    sampled_obj_locs = [default_obj_locs[default_obj_locs_labels.index(label)] for label in sampled_obj_locs_labels]
+    TARGET_LOCATIONS = [convert_to_global(rel_pos, Theta) for rel_pos in sampled_obj_locs]
+    
+    # Default color order
+    COLORS = ['R', 'G', 'B']
+    # Sample colors of objects e.g. [blue, red, green]
+    sampled_chosen_colors = random.sample(COLORS, num_objects)
+    
+    CUSTOM_OBJECT_LOCATION = {
+        "colors": sampled_chosen_colors,
+        "locations": TARGET_LOCATIONS
+    }
 
-    # # choose two from the list [1, 2, 3] without replacement
-    # drone_targets = random.sample(range(3), 2)
+    # Alternate target locations
+    alternate_target_locations = random.sample(sampled_obj_locs, num_objects)
+    alternate_sampled_colors = [sampled_chosen_colors[sampled_obj_locs.index(loc)] for loc in alternate_target_locations]
+    
+    # Starting drone locations
+    rel_drone_locs = [(0.5 * (i - (num_drones - 1)), 0) for i in range(num_drones)]
 
+    FINAL_THETA = [angle_between_two_points(rel_drone, rel_obj) for rel_drone, rel_obj in zip(rel_drone_locs, sampled_obj_locs)]
+    INIT_XYZS = np.array([[*convert_to_global(rel_pos, Theta), H] for rel_pos in rel_drone_locs])
+    INIT_RPYS = np.array([[0, 0, Theta0] for d in range(num_drones)])
 
-    # target locations: leader, follower
-    target_locations = [rel_obj_l] if num_drones == 1 else [rel_obj_l, rel_obj_f]
-    alternate_target_location = [convert_to_global(rel_obj_f, Theta)] # used in single drone mode
-    spawn_order = [rel_obj_l, rel_obj_f] if leader_goes_blue else [rel_obj_f, rel_obj_l]
-
-    if num_drones == 1:
-        FINAL_THETA = [angle_between_two_points(rel_drone_l, rel_obj_l)]
-        INIT_XYZS = np.array([[*convert_to_global(rel_pos, Theta), H] for rel_pos in [rel_drone_l]])
-        INIT_RPYS = np.array([[0, 0, Theta0] for d in range(num_drones)])
-    else:
-        FINAL_THETA = [angle_between_two_points(rel_drone_l, rel_obj_l), angle_between_two_points(rel_drone_f, rel_obj_f)]
-        INIT_XYZS = np.array([[*convert_to_global(rel_pos, Theta), H] for rel_pos in [rel_drone_l, rel_drone_f]])
-        INIT_RPYS = np.array([[0, 0, Theta0], [0, 0, Theta]]) if aligned_follower else np.array([[0, 0, Theta0] for d in range(num_drones)])
-    TARGET_LOCATIONS = [convert_to_global(rel_pos, Theta) for rel_pos in target_locations]
-    SPAWN_ORDER = [convert_to_global(rel_pos, Theta) for rel_pos in spawn_order]
     AGGR_PHY_STEPS = int(simulation_freq_hz / control_freq_hz) if aggregate else 1
 
-    if OBJ_START_DIST < 0.5: # adjustment for when the object is too close to the drone
-        for d in range(num_drones):
-            adj_pos = convert_to_global([OBJ_START_DIST, 0], FINAL_THETA[d] + Theta)
-            INIT_XYZS[d] = [TARGET_LOCATIONS[d][0] - adj_pos[0], TARGET_LOCATIONS[d][1] - adj_pos[1], H]
-            noise = random.uniform(-0.05, 0.05)
-            INIT_RPYS[d] = [0, 0, FINAL_THETA[d] + Theta + noise]
+    # if OBJ_START_DIST < 0.5: # adjustment for when the object is too close to the drone
+    #     for d in range(num_drones):
+    #         adj_pos = convert_to_global([OBJ_START_DIST, 0], FINAL_THETA[d] + Theta)
+    #         INIT_XYZS[d] = [TARGET_LOCATIONS[d][0] - adj_pos[0], TARGET_LOCATIONS[d][1] - adj_pos[1], H]
+    #         noise = random.uniform(-0.05, 0.05)
+    #         INIT_RPYS[d] = [0, 0, FINAL_THETA[d] + Theta + noise]
 
     STOPPING_START = 1.0; STOPPING_END = 0.5; HOLD_TIME = 0.5 # Hold stop for 0.5 seconds
     DEFAULT_SPEED = 0.15 # TILES / S
@@ -164,21 +165,20 @@ def run(
     MIN_SEARCHING_YAW = 0.01
     APPROX_CORRECT_YAW = 0.0001
 
-    EXTENSIVE_LABELS = [1 if leader_goes_blue else -1]
+    pre_color_label = sampled_chosen_colors[:num_drones]
+    post_color_label = alternate_sampled_colors[:num_drones]
     LABELS = []
+    UNFILTERED_LABELS = [pre_color_label]
 
     TARGET_POS = [[arry] for arry in INIT_XYZS]
     TARGET_ATT = [[arry] for arry in INIT_RPYS]
     INIT_THETA = [init_rpys[2] for init_rpys in INIT_RPYS]
     # angular distance between init and final theta
     DELTA_THETA = [signed_angular_distance(init_theta, final_theta + Theta) for final_theta, init_theta in zip(FINAL_THETA, INIT_RPYS[:, 2])]
-    # print(f"DELTA_THETA: {DELTA_THETA}")
 
     def step_with_distance_and_angle(counter, INIT_THETA, FINAL_THETA, DELTA_THETA, TARGET_LOCATIONS, switched_label, hold=False):
         speeds = []
-        pre_label = 1 if leader_goes_blue else -1
-        post_label = -1 if leader_goes_blue else 1
-        EXTENSIVE_LABELS.append(pre_label if not switched_label else post_label)
+        UNFILTERED_LABELS.append(pre_color_label if not switched_label else post_color_label)
         for target_pos, target_att, init_theta, final_theta, delta_theta, final_target in zip(TARGET_POS, TARGET_ATT, INIT_THETA, FINAL_THETA, DELTA_THETA, TARGET_LOCATIONS):
             last_pos = target_pos[-1] # X, Y, Z
             last_yaw = target_att[-1][2] # R, P, Y
@@ -242,16 +242,11 @@ def run(
         angle_counter += 1
 
         if switch and angle_counter == RAND_SWITCH_TIME * 8:
-            rel_drone_l = convert_to_relative((TARGET_POS[0][-1][0], TARGET_POS[0][-1][1]), Theta)
+            cur_drone_pos = [convert_to_relative((TARGET_POS[d][-1][0], TARGET_POS[d][-1][1]), Theta) for d in range(num_drones)]
+
+            FINAL_THETA = [angle_between_two_points(cur_drone_pos[d], alternate_target_locations[d]) for d in range(num_drones)]
+            TARGET_LOCATIONS = [convert_to_global(rel_pos, Theta) for rel_pos in alternate_target_locations]
             
-            if num_drones > 1:
-                rel_drone_f = convert_to_relative((TARGET_POS[1][-1][0], TARGET_POS[1][-1][1]), Theta)
-                # SWITCHED TARGETS
-                FINAL_THETA = [angle_between_two_points(rel_drone_l, rel_obj_f), angle_between_two_points(rel_drone_f, rel_obj_l)]
-                TARGET_LOCATIONS = [TARGET_LOCATIONS[1], TARGET_LOCATIONS[0]]
-            else:
-                FINAL_THETA = [angle_between_two_points(rel_drone_l, rel_obj_f)]
-                TARGET_LOCATIONS = alternate_target_location
             INIT_THETA = [target_att[-1][2] for target_att in TARGET_ATT]
             DELTA_THETA = [signed_angular_distance(init_theta, final_theta + Theta) for final_theta, init_theta in zip(FINAL_THETA, INIT_THETA)]
             switched_label = True
@@ -295,7 +290,7 @@ def run(
                          record=record_video,
                          obstacles=obstacles,
                          user_debug_gui=user_debug_gui,
-                         custom_obj_location=SPAWN_ORDER
+                         custom_obj_location=CUSTOM_OBJECT_LOCATION
                          )
     env.IMG_RES = np.array([256, 144])
 
@@ -367,14 +362,14 @@ def run(
                                [TARGET_POS[d, wp_counters[d], 0:2], INIT_XYZS[j, 2], INIT_RPYS[j, :], np.zeros(6)])
                            )
                 
-            LABELS.append(EXTENSIVE_LABELS[wp_counters[0]])
+            LABELS.append(UNFILTERED_LABELS[wp_counters[0]])
 
         #### Sync the simulation ###################################
         if gui:
             sync(i, START, env.TIMESTEP)
 
     with open(sim_dir + "/values.csv", 'wb') as out_file:
-        np.savetxt(out_file, LABELS, delimiter=",")
+        np.savetxt(out_file, LABELS, delimiter=",", fmt='%s')
 
     #### Close the environment #################################
     env.close()

@@ -91,6 +91,21 @@ class CtrlAviary(BaseAviary):
                        globalScaling=0.2
                        )
         # if self.CUSTOM_OBJECT_LOCATION is a list of tuples:
+        elif type(self.CUSTOM_OBJECT_LOCATION) is dict and "colors" in self.CUSTOM_OBJECT_LOCATION.keys() and "locations" in self.CUSTOM_OBJECT_LOCATION.keys():
+            for color, location in zip(self.CUSTOM_OBJECT_LOCATION["colors"], self.CUSTOM_OBJECT_LOCATION["locations"]):
+                # add new urdf files at /home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data
+                filename_map = {
+                    'R': "sphere2red.urdf",
+                    'B': "sphere2blue.urdf",
+                    'G': "sphere2green.urdf",
+                }
+                
+                p.loadURDF(filename_map[color],
+                        [*location, 0.1],
+                        p.getQuaternionFromEuler([0,0,0]),
+                        physicsClientId=self.CLIENT,
+                        globalScaling=0.2
+                        )
         elif type(self.CUSTOM_OBJECT_LOCATION) is list and type(self.CUSTOM_OBJECT_LOCATION[0]) is tuple:
             # for obj in self.CUSTOM_OBJECT_LOCATION:
             p.loadURDF("sphere2blue.urdf",
