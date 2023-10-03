@@ -74,26 +74,59 @@ class CtrlAviary(BaseAviary):
 
     ################################################################################
 
+    def addObject(self, color: str, xy_loc: tuple):
+        """Adds objects to the environment.
+
+        This method is called by the parent class constructor.
+
+        """
+        filename_map = {
+            'R': "sphere2red.urdf",
+            'B': "sphere2blue.urdf",
+            'G': "sphere2green.urdf",
+        }
+        assert color in filename_map.keys(), "Color not supported"
+                
+        return p.loadURDF(filename_map[color],
+                [*xy_loc, 0.1],
+                p.getQuaternionFromEuler([0,0,0]),
+                physicsClientId=self.CLIENT,
+                globalScaling=0.2
+                )
+    
+    def removeObject(self, obj_id):
+        p.removeBody(obj_id)
+
     def _addObstacles(self):
         """Add obstacles to the environment.
 
         These obstacles are loaded from standard URDF files included in Bullet.
 
         """
-        p.loadURDF("samurai.urdf",
+        p.removeBody(self.PLANE_ID)
+        p.loadURDF("custom_lawn.urdf",
+                #    [-1.3, -0.27, -0.07],
                    physicsClientId=self.CLIENT
                    )
+        # change background to sky blue
+        # p.changeVisualShape(p.loadURDF("plane.urdf"), -1, rgbaColor=[0.69, 0.847, 0.902, 1])
+        # p.loadURDF("random_urdfs/297/297.urdf",
+        #             [0, 0, 0],
+        #             physicsClientId=self.CLIENT
+        # )
+        # samurai_id = p.loadURDF("samurai.urdf",
+        #             [0, 0, 1.5],
+        #            physicsClientId=self.CLIENT
+        #            )
+        # stadium_id = p.loadSDF("stadium.sdf",
+        #             physicsClientId=self.CLIENT
+        #             )
         if self.CUSTOM_OBJECT_LOCATION is None:
-            p.loadURDF("sphere2red.urdf",
-                       [0, 0, 0.1],
-                       p.getQuaternionFromEuler([0,0,0]),
-                       physicsClientId=self.CLIENT,
-                       globalScaling=0.2
-                       )
+            return
         # if self.CUSTOM_OBJECT_LOCATION is a list of tuples:
         elif type(self.CUSTOM_OBJECT_LOCATION) is dict and "colors" in self.CUSTOM_OBJECT_LOCATION.keys() and "locations" in self.CUSTOM_OBJECT_LOCATION.keys():
             for color, location in zip(self.CUSTOM_OBJECT_LOCATION["colors"], self.CUSTOM_OBJECT_LOCATION["locations"]):
-                # add new urdf files at /home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data
+                # add new urdf files at /home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/samurai.urdf
                 filename_map = {
                     'R': "sphere2red.urdf",
                     'B': "sphere2blue.urdf",
