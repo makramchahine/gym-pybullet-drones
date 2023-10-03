@@ -54,7 +54,7 @@ DEFAULT_SIMULATION_FREQ_HZ = 240
 DEFAULT_CONTROL_FREQ_HZ = 240
 DEFAULT_RECORD_FREQ_HZ = 8
 DEFAULT_DURATION_SEC = 8
-DEFAULT_OUTPUT_FOLDER = f'train_o3_switch_early_bal_e100_216' # 'train_v11_fast_init_pp_60hz'
+DEFAULT_OUTPUT_FOLDER = f'train_o3_msu3_s40_fd_e100s138_216' # 'train_v11_fast_init_pp_60hz'
 DEFAULT_COLAB = False
 aligned_follower = True
 
@@ -91,9 +91,10 @@ def run(
         output_folder=DEFAULT_OUTPUT_FOLDER,
         colab=DEFAULT_COLAB,
 ):
-    sampled_obj_locs_labels, sampled_chosen_colors, alternate_sampled_colors = loc_color_tuple
+    LCR_obj_colors, colors_array, LCR_obj_xy = loc_color_tuple
 
-    #### Initialize the simulation #############################
+    #! Simulation parameters
+    #* Env Params
     H = .1
     sim_name = "save-flight-" + datetime.now().strftime("%m.%d.%Y_%H.%M.%S.%f") # include milliseconds in save name for parallel runs
 
@@ -107,59 +108,108 @@ def run(
     num_objects = 3
     Theta = random.random() * 2 * np.pi
     Theta0 = Theta # drone faces the direction of theta
-    early_stop = True #random.random() < 0.99
-    EARLY_STOP_FRAME = 73 #random.randint(73, 138) #random.randint(73, 138)
+
+    #* Augmentation Params
+    early_stop = True
+    EARLY_STOP_FRAME = random.randint(73, 138)
     two_step = False
+    switch = True
+    force_single_switch = False
+    decoupled_switch = colors_array is not None and len(colors_array) == 3
+    uniform_mode = True
+    alternating_mode = False
 
-    OBJ_START_DIST = random.uniform(1.5, 3)
-    RAND_SWITCH_TIME = random.randint(30, 40)
-    switch = True #True if random.random() < 0.8 else False
-
-    # Note: arrays are ordered by [Leader, Follower, Follower, ...]
-    # Default object locations (3 options) i.e. [left, center, right]
-    default_obj_locs_labels = ['L', 'C', 'R']
-    default_obj_locs = [(OBJ_START_DIST, lateral_obj_dist) for lateral_obj_dist in [random.uniform(0.3, 0.7), random.uniform(-0.1, 0.1), random.uniform(-0.3, -0.7)]]
-    # Sample Left/Center/Right locations of objects e.g. [right, center, left]
-    # sampled_obj_locs_labels = random.sample(default_obj_locs_labels, num_objects)
-    sampled_obj_locs = [default_obj_locs[default_obj_locs_labels.index(label)] for label in sampled_obj_locs_labels]
-    TARGET_LOCATIONS = [convert_to_global(rel_pos, Theta) for rel_pos in sampled_obj_locs]
-    
-    # Default color order
     COLORS = ['R', 'G', 'B']
-    # Sample colors of objects e.g. [blue, red, green]
-    # sampled_chosen_colors = random.sample(COLORS, num_objects)
+    PERMUTATIONS_COLORS = [list(perm) for perm in itertools.permutations(COLORS, 3)]
+    RAND_SWITCH_TIMES = []
+
+    if colors_array is None:
+        colors_array = [random.sample(PERMUTATIONS_COLORS, 1)[0]]
+
+    #! Generate target locations (start and switched)
+    #? base_obj arrays are absolutely ordered [Left, Center, Right]
+    #? base_obj_colors is therefore the corresponding colors of [Left, Center, Right]
+    LCR_obj_loclabels = ['L', 'C', 'R']
+    if LCR_obj_xy is None:
+        OBJ_START_DIST = random.uniform(2.5, 3)
+        LCR_obj_xy = [(OBJ_START_DIST, lateral_obj_dist) for lateral_obj_dist in [random.uniform(0.35, 0.7), random.uniform(-0.1, 0.1), random.uniform(-0.35, -0.7)]]
+    # LCR_obj_colors = [color_env[start_obj_loclabels.index(label)] for label in LCR_obj_loclabels]
+
+    def convert_color_array_to_location_array(color_array):
+        return [LCR_obj_xy[LCR_obj_colors.index(color)] for color in color_array]
+    def convert_array_to_global(array, Theta=Theta):
+        return [convert_to_global(rel_pos, Theta) for rel_pos in array]
+
+    #? array indices indicate which drone [Leader, Follower1, Follower2, ...]
+    start_obj_locs = convert_color_array_to_location_array(colors_array[0])
+    TARGET_LOCATIONS = convert_array_to_global(start_obj_locs)
+    
+    # ? Targets are encoded as 0-index for original, then other indices are switched locations
+    target_index = 0
+    target_locations = [start_obj_locs]
+    target_colors = [colors_array[0]]
+
+    def add_random_targets(target_colors, target_locations):
+        sampled_order = random.sample(PERMUTATIONS_COLORS, 1)[0]
+        target_colors.append(sampled_order)
+        target_locations.append(convert_color_array_to_location_array(sampled_order))
+        return target_colors, target_locations
+    
+    def add_target(colors, target_colors, target_locations):
+        target_colors.append(colors)
+        target_locations.append(convert_color_array_to_location_array(colors))
+        return target_colors, target_locations
+
+    def add_target_wrapper(target_colors, target_locations):
+        if alternating_mode and len(target_colors) > 2:
+            return add_target(target_colors[-2], target_colors, target_locations)
+        else:
+            return add_random_targets(target_colors, target_locations)
+
+    SWITCH_STOP_FRAME = 40
+    if decoupled_switch:
+        assert len(colors_array) == 3, f"decoupled_switch requires 3 color instructions, colors_array: {colors_array}"
+        target_colors, target_locations = add_target(colors_array[1], target_colors, target_locations)
+        target_colors, target_locations = add_target(colors_array[2], target_colors, target_locations)
+        assert len(target_colors) == 3, "decoupled_switch requires 3 color instructions, target_colors: {target_colors}"
+
+        RAND_SWITCH_TIMES = sorted(random.sample(list(range(10, EARLY_STOP_FRAME // 4)), 2))
+    elif force_single_switch:
+        target_colors, target_locations = add_target(colors_array[1], target_colors, target_locations)
+        RAND_SWITCH_TIMES = [random.randint(15, SWITCH_STOP_FRAME)]
+    elif uniform_mode:
+        num_switches = random.choices([1, 2, 3], k=1)
+        for i in range(num_switches[0]):
+            target_colors, target_locations = add_target_wrapper(target_colors, target_locations)
+        RAND_SWITCH_TIMES = sorted(random.sample(range(10, SWITCH_STOP_FRAME), num_switches[0]))
+    else:
+        for i in range(10, SWITCH_STOP_FRAME):
+            if random.random() < 0.05:
+                target_colors, target_locations = add_target_wrapper(target_colors, target_locations)
+                RAND_SWITCH_TIMES.append(i)
+    print("RAND_SWITCH_TIMES: ", RAND_SWITCH_TIMES)
+
     
     CUSTOM_OBJECT_LOCATION = {
-        "colors": sampled_chosen_colors,
-        "locations": TARGET_LOCATIONS
+        "colors": LCR_obj_colors,
+        "locations": convert_array_to_global(LCR_obj_xy)
     }
 
-    with open(os.path.join(sim_dir, 'locs.txt'), 'w') as f:
-        f.write(str("".join(sampled_obj_locs_labels)))
+    #* Save starting env params
+    # with open(os.path.join(sim_dir, 'locs.txt'), 'w') as f:
+    #     f.write(str("".join(start_obj_loclabels)))
     with open(os.path.join(sim_dir, 'colors.txt'), 'w') as f:
-        f.write(str("".join(sampled_chosen_colors)))
-
-    # Alternate target locations
-    # alternate_sampled_colors = 
-    alternate_target_locations = [sampled_obj_locs[sampled_chosen_colors.index(color)] for color in alternate_sampled_colors]
+        f.write(str("".join(colors_array[0])))
     
     # Starting drone locations
     rel_drone_locs = [(0.5 * (i - (num_drones - 1)), 0) for i in range(num_drones)]
 
-    FINAL_THETA = [angle_between_two_points(rel_drone, rel_obj) for rel_drone, rel_obj in zip(rel_drone_locs, sampled_obj_locs)]
+    FINAL_THETA = [angle_between_two_points(rel_drone, rel_obj) for rel_drone, rel_obj in zip(rel_drone_locs, start_obj_locs)]
     INIT_XYZS = np.array([[*convert_to_global(rel_pos, Theta), H] for rel_pos in rel_drone_locs])
     INIT_RPYS = np.array([[0, 0, Theta0] for d in range(num_drones)])
-
     AGGR_PHY_STEPS = int(simulation_freq_hz / control_freq_hz) if aggregate else 1
 
-    # if OBJ_START_DIST < 0.5: # adjustment for when the object is too close to the drone
-    #     for d in range(num_drones):
-    #         adj_pos = convert_to_global([OBJ_START_DIST, 0], FINAL_THETA[d] + Theta)
-    #         INIT_XYZS[d] = [TARGET_LOCATIONS[d][0] - adj_pos[0], TARGET_LOCATIONS[d][1] - adj_pos[1], H]
-    #         noise = random.uniform(-0.05, 0.05)
-    #         INIT_RPYS[d] = [0, 0, FINAL_THETA[d] + Theta + noise]
-
-    STOPPING_START = 1.0; STOPPING_END = 0.5; HOLD_TIME = 0.5 # Hold stop for 0.5 seconds
+    STOPPING_START = 1.0; STOPPING_END = 0.5; END_HOLD_TIME = 0.5 # Hold stop for 0.5 seconds
     DEFAULT_SPEED = 0.15 # TILES / S
     DEFAULT_BACKSPEED = 0.03 # TILES / S
     MIN_SPEED = 0.01
@@ -169,10 +219,8 @@ def run(
     MIN_SEARCHING_YAW = 0.01
     APPROX_CORRECT_YAW = 0.0001
 
-    pre_color_label = sampled_chosen_colors[:num_drones]
-    post_color_label = alternate_sampled_colors[:num_drones]
     LABELS = []
-    UNFILTERED_LABELS = [pre_color_label]
+    UNFILTERED_LABELS = [colors_array[0]]
 
     TARGET_POS = [[arry] for arry in INIT_XYZS]
     TARGET_ATT = [[arry] for arry in INIT_RPYS]
@@ -180,9 +228,9 @@ def run(
     # angular distance between init and final theta
     DELTA_THETA = [signed_angular_distance(init_theta, final_theta + Theta) for final_theta, init_theta in zip(FINAL_THETA, INIT_RPYS[:, 2])]
 
-    def step_with_distance_and_angle(counter, INIT_THETA, FINAL_THETA, DELTA_THETA, TARGET_LOCATIONS, switched_label, hold=False):
+    def step_with_distance_and_angle(counter, INIT_THETA, FINAL_THETA, DELTA_THETA, TARGET_LOCATIONS, target_index, hold=False):
         speeds = []
-        UNFILTERED_LABELS.append(pre_color_label if not switched_label else post_color_label)
+        UNFILTERED_LABELS.append(target_colors[target_index][:num_drones])
         for target_pos, target_att, init_theta, final_theta, delta_theta, final_target in zip(TARGET_POS, TARGET_ATT, INIT_THETA, FINAL_THETA, DELTA_THETA, TARGET_LOCATIONS):
             last_pos = target_pos[-1] # X, Y, Z
             last_yaw = target_att[-1][2] # R, P, Y
@@ -212,10 +260,6 @@ def run(
             else:
                 yaw_speed = 0
 
-            # print("final_theta: ", final_theta)
-            # print(f"init_pos: {target_pos[0]}, final_target: {final_target}")
-            # print("delta_pos: ", delta_pos)
-            # adj_theta = delta_theta * ((counter / ANGLE_RECOVERY_TIMESTEPS) if counter < ANGLE_RECOVERY_TIMESTEPS else 1)
             delta_pos = convert_to_global([speed, 0], final_theta + Theta)
 
             if abs(yaw_dist) < APPROX_CORRECT_YAW or np.sign(yaw_dist) != np.sign(delta_theta):
@@ -232,43 +276,59 @@ def run(
             speeds.append(speed)
         return speeds
     
+    logging_targets = []
+    logging_final_theta = []
+    logging_init_theta = []
+    logging_delta_theta = []
+    # ! Precompute Trajectories
+    # usually, computed at 240 hz
+    angle_counter = 0 # only updated after Starting Hold
 
-    angle_counter = 0
+    # * Hold for stabilization
+    # for i in range(int(1 * control_freq_hz)):
+    #     step_with_distance_and_angle(angle_counter, INIT_THETA, FINAL_THETA, DELTA_THETA, TARGET_LOCATIONS, alternate_index, hold=True)
 
-    switched_label = False
-    # Holding position
-    for i in range(int((HOLD_TIME + 1.0) * control_freq_hz)):
-        step_with_distance_and_angle(angle_counter, INIT_THETA, FINAL_THETA, DELTA_THETA, TARGET_LOCATIONS, switched_label, hold=True)
-
+    # * Main trajectory is at 240 Hz
     speeds = [DEFAULT_SPEED / control_freq_hz for i in range(num_drones)]
     while np.abs(np.array(speeds)).max() > 1e-6:
-        speeds = step_with_distance_and_angle(angle_counter, INIT_THETA, FINAL_THETA, DELTA_THETA, TARGET_LOCATIONS, switched_label)
+        speeds = step_with_distance_and_angle(angle_counter, INIT_THETA, FINAL_THETA, DELTA_THETA, TARGET_LOCATIONS, target_index)
         angle_counter += 1
 
-        if switch and angle_counter == RAND_SWITCH_TIME * 8:
+        if angle_counter % 30 == 0:
+            logging_targets.append([y for (x, y) in target_locations[target_index]])
+            logging_final_theta.append(FINAL_THETA)
+            logging_init_theta.append(INIT_THETA)
+            logging_delta_theta.append(DELTA_THETA)
+
+        if switch and (np.array(angle_counter) == np.array(RAND_SWITCH_TIMES) * 30).any():
+            target_index += 1
+            print(f"switching: {angle_counter} {target_index}")
             cur_drone_pos = [convert_to_relative((TARGET_POS[d][-1][0], TARGET_POS[d][-1][1]), Theta) for d in range(num_drones)]
 
-            FINAL_THETA = [angle_between_two_points(cur_drone_pos[d], alternate_target_locations[d]) for d in range(num_drones)]
-            TARGET_LOCATIONS = [convert_to_global(rel_pos, Theta) for rel_pos in alternate_target_locations]
-            
+            for d in range(num_drones):
+                print(f"cur_drone_pos[d]: {cur_drone_pos[d]}")
+                print(f"target_locations[target_index][d]: {target_locations[target_index][d]}")
+            print(FINAL_THETA)
+            FINAL_THETA = [angle_between_two_points(cur_drone_pos[d], target_locations[target_index][d]) for d in range(num_drones)]
+            TARGET_LOCATIONS = convert_array_to_global(target_locations[target_index])
             INIT_THETA = [target_att[-1][2] for target_att in TARGET_ATT]
             DELTA_THETA = [signed_angular_distance(init_theta, final_theta + Theta) for final_theta, init_theta in zip(FINAL_THETA, INIT_THETA)]
-            switched_label = True
+
 
         if early_stop and len(TARGET_POS[0]) > EARLY_STOP_FRAME * 30: # 73
-        # if early_stop and angle_counter > 10 * control_freq_hz:
             break
 
-    # Holding position
+    #* Hold for learning to stop
     if not early_stop:
-        for i in range(int(HOLD_TIME * control_freq_hz)):
-            step_with_distance_and_angle(angle_counter, INIT_THETA, FINAL_THETA, DELTA_THETA, TARGET_LOCATIONS, switched_label)
+        for i in range(int(END_HOLD_TIME * control_freq_hz)):
+            step_with_distance_and_angle(angle_counter, INIT_THETA, FINAL_THETA, DELTA_THETA, TARGET_LOCATIONS, target_index)
             angle_counter += 1
 
+    assert target_index == len(target_locations) - 1, f"target_index: {target_index}, len(target_locations): {len(target_locations)}"
 
     wp_counters = np.array([0 for i in range(num_drones)])
 
-    #### Create the environment with or without video capture ##
+    #! Simulation Setup
     if vision:
         env = VisionAviary(drone_model=drone,
                            num_drones=num_drones,
@@ -315,7 +375,7 @@ def run(
     elif drone in [DroneModel.HB]:
         ctrl = [SimplePIDControl(drone_model=drone) for i in range(num_drones)]
 
-    #### Run the simulation ####################################
+    #! Simulation Params
     CTRL_EVERY_N_STEPS = int(np.floor(env.SIM_FREQ / control_freq_hz)) # 1
     REC_EVERY_N_STEPS = int(np.floor(env.SIM_FREQ / record_freq_hz )) #30 #240
     action = {str(i): np.array([0, 0, 0, 0]) for i in range(num_drones)}
@@ -327,15 +387,15 @@ def run(
 
     env.reset()
 
+    #! Stepping Simulation
+    # main loop at 240hz
     actions = []
     for i in trange(0, int(STEPS), AGGR_PHY_STEPS):
         #### Step the simulation ###################################
         obs, reward, done, info = env.step(action)
 
-        #### Compute control at the desired frequency ##############
+        #* Compute step-by-step velocities for 240hz-trajectory; Control Frequency is 240hz
         if i % CTRL_EVERY_N_STEPS == 0:
-
-            #### Compute control for the current way point #############
             for j in range(num_drones):
                 state = obs[str(j)]["state"]
                 action[str(j)], _, _ = ctrl[j].computeControlFromState(
@@ -347,9 +407,9 @@ def run(
 
             #### Go to the next way point and loop #####################
             for j in range(num_drones):
-                wp_counters[j] = wp_counters[j] + 1 if wp_counters[j] < (ACTIVE_WP - 1) else 0
+                wp_counters[j] = wp_counters[j] + 1 if wp_counters[j] < (ACTIVE_WP - 1) else wp_counters[j]
 
-
+        #* Network Frequency is 30hz
         if i % REC_EVERY_N_STEPS == 0 and i>env.SIM_FREQ:
             for d in range(num_drones):
                 rgb, dep, seg = env._getDroneImages(d)
@@ -375,11 +435,19 @@ def run(
 
     with open(sim_dir + "/values.csv", 'wb') as out_file:
         np.savetxt(out_file, LABELS, delimiter=",", fmt='%s')
-
-    #### Close the environment #################################
+    processed_switch_times = [t - 8 for t in RAND_SWITCH_TIMES]
+    with open(sim_dir + "/switchpoints.csv", 'wb') as out_file:
+        np.savetxt(out_file, processed_switch_times, delimiter=",", fmt='%s')
+    # with open(sim_dir + "/targets.csv", 'wb') as out_file:
+    #     np.savetxt(out_file, logging_targets[8:], delimiter=",", fmt='%f,%f,%f')
+    # with open(sim_dir + "/final_theta.csv", 'wb') as out_file:
+    #     np.savetxt(out_file, logging_final_theta[8:], delimiter=",", fmt='%f')
+    # with open(sim_dir + "/init_theta.csv", 'wb') as out_file:
+    #     np.savetxt(out_file, logging_init_theta[8:], delimiter=",", fmt='%f')
+    # with open(sim_dir + "/delta_theta.csv", 'wb') as out_file:
+    #     np.savetxt(out_file, logging_delta_theta[8:], delimiter=",", fmt='%f')
+    
     env.close()
-
-    #### Save the simulation results ###########################
     logger.save_as_csv(sim_name)  # Optional CSV save
 
     debug_plots = True
@@ -450,29 +518,49 @@ if __name__ == "__main__":
                         help='Whether example is being run by a notebook (default: "False")', metavar='')
     ARGS = parser.parse_args()
 
-    LOCATIONS = ['L', 'C', 'R']
-    PERMUTATIONS_LOCATIONS = [list(perm) for perm in itertools.permutations(LOCATIONS, 3)]
+    # LOCATIONS = ['L', 'C', 'R']
+    # PERMUTATIONS_LOCATIONS = [list(perm) for perm in itertools.permutations(LOCATIONS, 3)]
+    # sampled_locations = random.sample(PERMUTATIONS_LOCATIONS, 1)[0]
+    
+    def is_double_switch(first, second):
+        return first[0] != second[0] and first[1] != second[1]
+    
+    def get_decoupled_paths(first, second):
+        intermediate1 = first[0] + second[1] # switch follower first
+        intermediate2 = second[0] + first[1] # switch leader first
+        return list(intermediate1), list(intermediate2) # returns in form ['R', 'G'] and ['G', 'R']
 
-    # get all 2 color permutations, without replacement
-    # e.g. ['RG', 'RB', 'GR', 'GB', 'BR', 'BG']
+    # get all 2 color permutations, without replacement e.g. ['RG', 'RB', 'GR', 'GB', 'BR', 'BG']
     COLORS = ['R', 'G', 'B']
     PERMUTATIONS_COLORS = [list(perm) for perm in itertools.permutations(COLORS, 3)]
 
-    # take euclidean product of colors and locations
-    euclidean_product = [(loc, color, color2) for color2 in PERMUTATIONS_COLORS for color in PERMUTATIONS_COLORS for loc in PERMUTATIONS_LOCATIONS]
-    # euclidean_product = [(loc, color, color2) for color2 in PERMUTATIONS_COLORS for color in PERMUTATIONS_COLORS for loc in PERMUTATIONS_LOCATIONS]
+    num_initializations = 1
+    LCR_env_colors = PERMUTATIONS_COLORS * num_initializations
+    # LCR_env_colors = random.sample(PERMUTATIONS_COLORS, num_initializations)
+    total_list = []
+    for i, LCR_env_color in enumerate(LCR_env_colors):
+        OBJ_START_DIST = random.uniform(2.5, 3)
+        # base_obj_xy = [(OBJ_START_DIST, lateral_obj_dist) for lateral_obj_dist in [random.uniform(0.35, 0.5), random.uniform(-0.1, 0.1), random.uniform(-0.35, -0.5)]]
+        base_obj_xy = None
 
-    total_list = euclidean_product * 1
-    assert len(total_list) == 6 * 6 * 6 * 1 # 432
+        fragment = [(LCR_env_color, None, base_obj_xy)]
+        total_list.extend(fragment)
+        # fragment = [(LCR_env_color, (color1, color2), base_obj_xy) for color1 in PERMUTATIONS_COLORS for color2 in PERMUTATIONS_COLORS if color1 != color2]
+        # decoupled_frament = []
+        # for (LCR_env_color, (color1, color2), base_obj_xy) in fragment:
+        #     if is_double_switch(color1, color2):
+        #         intermediate1, intermediate2 = get_decoupled_paths(color1, color2)
+        #         decoupled_frament.append((LCR_env_color, (color1, intermediate1, color2), base_obj_xy))
+        #         decoupled_frament.append((LCR_env_color, (color1, intermediate2, color2), base_obj_xy))
+        #     else:
+        #         decoupled_frament.append((LCR_env_color, (color1, color2), base_obj_xy))
+        # total_list.extend(decoupled_frament)
 
+    total_list = total_list * 36
+    assert len(total_list) == num_initializations * 6 * 36, f"len(total_list): {len(total_list)}"
     random.shuffle(total_list)
 
-    # from multiprocessing import Pool
-    import multiprocessing
     from tqdm import tqdm
-    # pool = Pool(os.cpu_count())
-
-    from concurrent.futures import ProcessPoolExecutor
     from functools import partial
     run_func = partial(run, **vars(ARGS))
 
@@ -481,14 +569,3 @@ if __name__ == "__main__":
 
     import joblib
     joblib.Parallel(n_jobs=16)(joblib.delayed(run_func)(d) for d in tqdm(total_list))
-    # with ProcessPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
-    #     for (run_number, d) in tqdm(enumerate(total_list)):
-    #         futures.append(executor.submit(run_func, d))
-
-    #     for future in tqdm(futures):
-    #         returns.append(future.result())
-
-    # executor = ProcessPoolExecutor(max_workers=10)
-    # result = executor.map(run_func, total_list) 
-
-    # run(**vars(ARGS))

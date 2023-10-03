@@ -71,9 +71,9 @@ DEFAULT_PARAMS_PATH = None
 DEFAULT_CHECKPOINT_PATH = None
 normalize_path = None
 
-normalize_path = '/home/makramchahine/repos/drone_multimodal/clean_train_o3_switch_early_bal_e100_648fr138fn/mean_std.csv'
+normalize_path = '/home/makramchahine/repos/drone_multimodal/clean_train_o3_ms5palt_s40_e100s138_216/mean_std.csv'
 # normalize_path = '/home/makramchahine/repos/drone_multimodal/clean_train_o3_single_switch_early_bal_7776/mean_std.csv'
-base_runner_folder = "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o3_switch_early_bal_2rnn_6dim_1e4_d98_glo_s16_e100_648fr138fn_1200sf"
+base_runner_folder = "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_o3_ms5palt_s40_2rnn_3dim_1e4_d98_glo_s16_e100s138_216_800sf"
 tag_name = "_".join(base_runner_folder.split('/')[-1].split('_')[1:])
 DEFAULT_OUTPUT_FOLDER = f'cl_{tag_name}'
 
@@ -207,7 +207,7 @@ def run(
     
     # Default object locations (3 options) i.e. [left, center, right]
     default_obj_locs_labels = ['L', 'C', 'R']
-    default_obj_locs = [(OBJ_START_DIST, lateral_obj_dist) for lateral_obj_dist in [random.uniform(0.3, 0.7), 0, random.uniform(-0.3, -0.7)]]
+    default_obj_locs = [(OBJ_START_DIST, lateral_obj_dist) for lateral_obj_dist in [random.uniform(-0.35, -0.5), 0, random.uniform(0.35, 0.5)]]
     # Sample Left/Center/Right locations of objects e.g. [right, center, left]
     sampled_obj_locs_labels = random.sample(default_obj_locs_labels, num_objects)
     sampled_obj_locs = [default_obj_locs[default_obj_locs_labels.index(label)] for label in sampled_obj_locs_labels]
@@ -550,7 +550,8 @@ if __name__ == "__main__":
     else:
         print("No .json files found in the directory.")
 
-    if hdf5_file_path and json_file_path:
+    if hdf5_file_path and json_file_path and not os.path.exists(os.path.join(DEFAULT_OUTPUT_FOLDER, 'val')):
+
         # run(params_path=json_file_path, checkpoint_path=hdf5_file_path)
         for _ in range(16):
             concurrent_checkpoint_paths.append(hdf5_file_path)
@@ -564,6 +565,12 @@ if __name__ == "__main__":
     for hdf5_file_path in hdf5_files:
         # parse "epoch-%d" from hdf5 filename
         epoch_num = int(re.findall(r'epoch-(\d+)', hdf5_file_path)[0])
+        print(epoch_num)
+        # print(os.path.join(DEFAULT_OUTPUT_FOLDER, f'recurrent{epoch_num}'))
+        # print(os.path.exists(os.path.join(DEFAULT_OUTPUT_FOLDER, f'recurrent{epoch_num}')))
+        if os.path.exists(os.path.join(DEFAULT_OUTPUT_FOLDER, f'recurrent{epoch_num}')):
+            print(f"skipping epoch {epoch_num}")
+            continue
         for _ in range(16):
             if os.path.exists(os.path.join(base_runner_folder, 'recurrent', f'params{epoch_num}.json')):
                 concurrent_checkpoint_paths.append(hdf5_file_path)
