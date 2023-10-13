@@ -103,21 +103,21 @@ class CtrlAviary(BaseAviary):
         These obstacles are loaded from standard URDF files included in Bullet.
 
         """
-        p.removeBody(self.PLANE_ID)
-        p.loadURDF("custom_lawn.urdf",
-                #    [-1.3, -0.27, -0.07],
-                   physicsClientId=self.CLIENT
-                   )
+        # p.removeBody(self.PLANE_ID)
+        # p.loadURDF("custom_lawn.urdf",
+        #         #    [-1.3, -0.27, -0.07],
+        #            physicsClientId=self.CLIENT
+        #            )
         # change background to sky blue
         # p.changeVisualShape(p.loadURDF("plane.urdf"), -1, rgbaColor=[0.69, 0.847, 0.902, 1])
         # p.loadURDF("random_urdfs/297/297.urdf",
         #             [0, 0, 0],
         #             physicsClientId=self.CLIENT
         # )
-        # samurai_id = p.loadURDF("samurai.urdf",
-        #             [0, 0, 1.5],
-        #            physicsClientId=self.CLIENT
-        #            )
+        samurai_id = p.loadURDF("samurai.urdf",
+                    [0, 0, 0],
+                   physicsClientId=self.CLIENT
+                   )
         # stadium_id = p.loadSDF("stadium.sdf",
         #             physicsClientId=self.CLIENT
         #             )
@@ -128,10 +128,11 @@ class CtrlAviary(BaseAviary):
             for color, location in zip(self.CUSTOM_OBJECT_LOCATION["colors"], self.CUSTOM_OBJECT_LOCATION["locations"]):
                 # add new urdf files at /home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/samurai.urdf
                 filename_map = {
-                    'R': "sphere2red.urdf",
-                    'B': "sphere2blue.urdf",
-                    'G': "sphere2green.urdf",
+                    'R': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2red.urdf",
+                    'B': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2blue.urdf",
+                    'G': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2green.urdf",
                 }
+                print(f"color!! {color}")
                 
                 p.loadURDF(filename_map[color],
                         [*location, 0.1],
