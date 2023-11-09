@@ -30,7 +30,7 @@ import itertools
 
 DEFAULT_CONTROL_FREQ_HZ = 240
 STOPPING_START = 1.0; STOPPING_END = 0.5; END_HOLD_TIME = 0.5 # Hold stop for 0.5 seconds
-DEFAULT_SPEED = 0.15 # TILES / S
+DEFAULT_SPEED = 0.1 / 2 # TILES / S
 DEFAULT_BACKSPEED = 0.03 # TILES / S
 MIN_SPEED = 0.01
 ANGLE_RECOVERY_TIMESTEPS = DEFAULT_CONTROL_FREQ_HZ * 5 #random.uniform(2, 10)
@@ -39,7 +39,7 @@ SLOW_YAW_THRESHOLD = 0.05
 MIN_SEARCHING_YAW = 0.01
 APPROX_CORRECT_YAW = 0.0001
 APPROX_CORRECT_HEIGHT = 0.001
-STABILIZE_LIFT_SPEED = 0.05
+STABILIZE_LIFT_MULTIPLIER = 0.25
 
 IN_VIEW_THRESHOLD_RADIAN = 0.2 * np.pi
 IN_RANGE_THRESHOLD = 0.7
@@ -47,9 +47,9 @@ IN_RANGE_THRESHOLD = 0.7
 task = "hike"
 drop = True
 if task == 'hike':
-    DEFAULT_CRITICAL_SPEED = 0.05
-    DEFAULT_CRITICAL_YAW_SPEED = 0.2 * np.pi
-    DEFAULT_SEARCHING_YAW = 0.10 * np.pi
+    DEFAULT_CRITICAL_SPEED = 0.05 / 1.5  
+    DEFAULT_CRITICAL_YAW_SPEED = 0.2 * np.pi * 2/3
+    DEFAULT_SEARCHING_YAW = 0.10 * np.pi * 2/3
     DEFAULT_LIFT_SPEED = 0.05
     DEFAULT_DROP_POINT_DIST = 0.05
     DROP_MAX_HEIGHT = 0.3
@@ -87,6 +87,8 @@ def setup_folders(sim_dir, num_drones):
             os.makedirs(sim_dir + f"/pics{d}/")
         if not os.path.exists(sim_dir + f"/pybullet_pics{d}"):
             os.makedirs(sim_dir + f"/pybullet_pics{d}/")
+        if not os.path.exists(sim_dir + f"/rgb_images"):
+            os.makedirs(sim_dir + f"/rgb_images/")
 
 def add_random_targets(target_colors, target_locations, LCR_obj_xy, LCR_obj_colors):
     sampled_order = random.sample(PERMUTATIONS_COLORS, 1)[0]
@@ -178,7 +180,7 @@ def step_hike(critical_dist, critical_dist_buffer, critical_action: str, INIT_TH
         elif dist > critical_dist + critical_dist_buffer and not previously_hit_critical:
             speed = DEFAULT_SPEED / control_freq_hz
             yaw_speed = DEFAULT_SEARCHING_YAW * np.sign(yaw_dist) / control_freq_hz
-            lift_speed = 0 if (abs(height_dist) < APPROX_CORRECT_HEIGHT) else STABILIZE_LIFT_SPEED * (height_dist / height) / control_freq_hz
+            lift_speed = 0 if (abs(height_dist) < APPROX_CORRECT_HEIGHT) else STABILIZE_LIFT_MULTIPLIER * (height_dist / height) / control_freq_hz
 
             if abs(yaw_dist) < APPROX_CORRECT_YAW:
                 new_theta = final_theta + Theta
@@ -188,7 +190,7 @@ def step_hike(critical_dist, critical_dist_buffer, critical_action: str, INIT_TH
         elif dist > critical_dist and not previously_hit_critical:
             speed = interpolate_speeds(dist, critical_dist, critical_dist_buffer, DEFAULT_CRITICAL_SPEED, DEFAULT_SPEED) / control_freq_hz
             yaw_speed = interpolate_speeds(dist, critical_dist, critical_dist_buffer, DEFAULT_CRITICAL_YAW_SPEED, DEFAULT_SEARCHING_YAW) * np.sign(yaw_dist) / control_freq_hz
-            lift_speed = 0 if (abs(height_dist) < APPROX_CORRECT_HEIGHT) else STABILIZE_LIFT_SPEED * (height_dist / height) / control_freq_hz
+            lift_speed = 0 if (abs(height_dist) < APPROX_CORRECT_HEIGHT) else STABILIZE_LIFT_MULTIPLIER * (height_dist / height) / control_freq_hz
 
             if abs(yaw_dist) < APPROX_CORRECT_YAW:
                 new_theta = final_theta + Theta

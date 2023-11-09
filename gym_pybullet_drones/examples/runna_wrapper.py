@@ -34,11 +34,19 @@ from tqdm import tqdm
 from functools import partial
 import joblib
 
+import sys
+sys.path.append("/home/makramchahine/repos")
+sys.path.append("/home/makramchahine/repos/gym-pybullet-drones")
+sys.path.append("/home/makramchahine/repos/gym-pybullet-drones/gym_pybullet_drones")
+sys.path.append("/home/makramchahine/repos/gym-pybullet-drones/gym_pybullet_drones/examples")
+
 from gym_pybullet_drones.utils.enums import DroneModel, Physics
 from gym_pybullet_drones.utils.utils import sync, str2bool
 
 from runna_hike import run
 from culekta_utils import PERMUTATIONS_COLORS
+
+import tensorflow as tf
 
 DEFAULT_DRONES = DroneModel("cf2x")
 DEFAULT_NUM_DRONES = 1
@@ -56,8 +64,10 @@ DEFAULT_RECORD_FREQ_HZ = 8
 DEFAULT_DURATION_SEC = 15
 DEFAULT_COLAB = False
 
-normalize_path = '/home/makramchahine/repos/drone_multimodal/clean_train_h0f_hr_300/mean_std.csv'
-base_runner_folder = "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_h0f_hr_300_aug_600sf"
+# normalize_path = '/home/makramchahine/repos/drone_multimodal/clean_train_h0f_hr_300/mean_std.csv'
+# base_runner_folder = "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_h0f_hr_300_og_600sf"
+normalize_path = "/home/makramchahine/repos/drone_multimodal/clean_train_d3_300/mean_std.csv"
+base_runner_folder = "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d3_300_srf_600sf"
 tag_name = "_".join(base_runner_folder.split('/')[-1].split('_')[1:])
 multi = False
 vanish = False
@@ -66,6 +76,7 @@ if multi:
     DEFAULT_DURATION_SEC = DEFAULT_DURATION_SEC * 3
 if vanish:
     tag_name = tag_name + '_vanish'
+tag_name = tag_name + '_debug_cuda'
 DEFAULT_OUTPUT_FOLDER = f'cl_{tag_name}'
 
 if __name__ == "__main__":
@@ -137,7 +148,7 @@ if __name__ == "__main__":
         # parse "epoch-%d" from hdf5 filename
         epoch_num = int(re.findall(r'epoch-(\d+)', hdf5_file_path)[0])
         print(epoch_num)
-        epoch_filter = [100, 200, 600]
+        epoch_filter = [100]
         if multi and use_epoch_filter and epoch_num not in epoch_filter:
             continue
 
@@ -194,7 +205,8 @@ if __name__ == "__main__":
 
     # assert len(total_list) == NUM_INITIALIZATIONS * 16 * 5, f"len(total_list): {len(total_list)}"
     joblib.Parallel(n_jobs=16)(joblib.delayed(run)(d, normalize_path=normalize_path, output_folder=output_folder_path, params_path=params_path, checkpoint_path=checkpoint_path, duration_sec=DEFAULT_DURATION_SEC) for d, params_path, checkpoint_path, output_folder_path in tqdm(zip(total_list, concurrent_params_paths, concurrent_checkpoint_paths, output_folder_paths)))
-    
+    # for d, params_path, checkpoint_path, output_folder_path in zip(total_list, concurrent_params_paths, concurrent_checkpoint_paths, output_folder_paths):
+    #     run(d, normalize_path=normalize_path, output_folder=output_folder_path, params_path=params_path, checkpoint_path=checkpoint_path, duration_sec=DEFAULT_DURATION_SEC)
 
     import os
     from PIL import Image, ImageDraw, ImageFont

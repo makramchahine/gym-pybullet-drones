@@ -238,6 +238,7 @@ def run(
                                  )
 
                 rgb = rgb[None,:,:,0:3]
+                plt.imsave(f'{sim_dir}/rgb_images/rgb_{d}_{i}.png', rgb[0])
                 imgs[d] = rgb
 
             inputs = [*imgs, *hiddens]
@@ -404,7 +405,7 @@ def run(
             vel_cmd = []
             for row in vel_cmd_reader:
                 vel_cmd.append(row)
-            vel_cmd = np.array(vel_cmd).astype(np.float)
+            vel_cmd = np.array(vel_cmd).astype(float)
         
             t = np.linspace(0, 1, len(vel_cmd))  # time variable
             for i, (title, ax) in enumerate(zip(["vx_pred", "vy_pred", "vz_pred", "yaw_rate_pred"], axs)):
