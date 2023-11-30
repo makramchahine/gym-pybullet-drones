@@ -115,7 +115,8 @@ class Logger(object):
     ################################################################################
 
     def save_as_csv(self,
-                    comment: str=""
+                    comment: str="",
+                    custom_timesteps: list=None,
                     ):
         """Save the logs---on your Desktop---as comma separated values.
 
@@ -128,8 +129,14 @@ class Logger(object):
         csv_dir = os.path.join(self.OUTPUT_FOLDER, comment)
         if not os.path.exists(csv_dir):
             os.makedirs(csv_dir+'/')
-        t = np.arange(0, self.timestamps.shape[1]/self.LOGGING_FREQ_HZ, 1/self.LOGGING_FREQ_HZ)
+        if custom_timesteps is None:
+            t = np.arange(0, self.timestamps.shape[1]/self.LOGGING_FREQ_HZ, 1/self.LOGGING_FREQ_HZ)
+        else:
+            t = np.array(custom_timesteps)
         for i in range(self.NUM_DRONES):
+            # Ensure that the shapes of the arrays to be concatenated match along the concatenation axis
+            if self.states[i, 0:12, :].shape[1] != t.shape[0]:
+                t = t[:self.states[i, 0:12, :].shape[1]]
             with open(csv_dir + "/log_" + str(i) + ".csv", 'wb') as out_file:
                 np.savetxt(out_file, np.transpose(np.vstack([t, self.states[i, 0:12, :]])), delimiter=",")
                 # write the header

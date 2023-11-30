@@ -81,9 +81,9 @@ class CtrlAviary(BaseAviary):
 
         """
         filename_map = {
-            'R': "sphere2red.urdf",
-            'B': "sphere2blue.urdf",
-            'G': "sphere2green.urdf",
+            'R': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2red.urdf",
+            'B': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2blue.urdf",
+            'G': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2green.urdf",
         }
         assert color in filename_map.keys(), "Color not supported"
                 
@@ -132,30 +132,29 @@ class CtrlAviary(BaseAviary):
                     'B': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2blue.urdf",
                     'G': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2green.urdf",
                 }
-                print(f"color!! {color}")
                 
                 p.loadURDF(filename_map[color],
-                        [*location, 0.1],
+                        [*location, 0.1 + 0.5],
                         p.getQuaternionFromEuler([0,0,0]),
                         physicsClientId=self.CLIENT,
                         globalScaling=0.2
                         )
         elif type(self.CUSTOM_OBJECT_LOCATION) is list and type(self.CUSTOM_OBJECT_LOCATION[0]) is tuple:
             # for obj in self.CUSTOM_OBJECT_LOCATION:
-            p.loadURDF("sphere2blue.urdf",
+            p.loadURDF("/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2blue.urdf",
                     [*self.CUSTOM_OBJECT_LOCATION[0], 0.1],
                     p.getQuaternionFromEuler([0,0,0]),
                     physicsClientId=self.CLIENT,
                     globalScaling=0.2
                     )
-            p.loadURDF("sphere2red.urdf",
+            p.loadURDF("/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2red.urdf",
                     [*self.CUSTOM_OBJECT_LOCATION[1], 0.1],
                     p.getQuaternionFromEuler([0,0,0]),
                     physicsClientId=self.CLIENT,
                     globalScaling=0.2
                     )
         else:
-            p.loadURDF("sphere2red.urdf",
+            p.loadURDF("/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2red.urdf",
                    [*self.CUSTOM_OBJECT_LOCATION, 0.1],
                    p.getQuaternionFromEuler([0,0,0]),
                    physicsClientId=self.CLIENT,

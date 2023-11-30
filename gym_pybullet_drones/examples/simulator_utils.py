@@ -17,14 +17,14 @@ def get_x_y_z_yaw_relative_to_base_env(state, Theta):
 def get_x_y_z_yaw_global(state):
     return np.array([state[0], state[1], state[2], state[9]])
 
-def get_relative_displacement(later_state, earlier_state):
+def get_relative_displacement(later_state, earlier_state, environment_theta):
     # print(f"later_state_xy: {later_state[0:2]}")
     # print(f"earlier_state_xy: {earlier_state[0:2]}")
     # print(f"x_diff: {later_state[0] - earlier_state[0]}")
     # print(f"y_diff: {later_state[1] - earlier_state[1]}")
     # print(f"yaw: {earlier_state[3]}")
     # print(f"relative_xy: {relative_xy}\n")
-    relative_xy = convert_to_relative([later_state[0] - earlier_state[0], later_state[1] - earlier_state[1]], earlier_state[3])
+    relative_xy = convert_to_relative([later_state[0] - earlier_state[0], later_state[1] - earlier_state[1]], earlier_state[3] + environment_theta)
     return np.array([relative_xy[0], relative_xy[1], later_state[2] - earlier_state[2], signed_angular_distance(earlier_state[3], later_state[3])])
 
     # relative_xy_later = convert_to_relative([later_state[0], later_state[1]], earlier_state[3])

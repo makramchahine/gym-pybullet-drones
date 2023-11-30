@@ -7,7 +7,8 @@ from tqdm import tqdm
 from datetime import datetime
 import numpy as np
 
-from gym_pybullet_drones.examples.simulator import Simulator, DEFAULT_NUM_DRONES
+from gym_pybullet_drones.examples.simulator import BaseSimulator, DEFAULT_NUM_DRONES
+from gym_pybullet_drones.examples.simulator_train import TrainSimulator
 from culekta_utils import setup_folders
 
 def generate_init_conditions_and_save_to_folder(sim_dir):
@@ -18,7 +19,7 @@ def generate_init_conditions_and_save_to_folder(sim_dir):
         start_H = 0.1 + random.choice([0, 1])
         Theta_offset = random.uniform(0.175 * np.pi, -0.175 * np.pi)
     target_Hs = [0.1 + 0.5]
-    Theta = 0 #random.random() * 2 * np.pi
+    Theta = random.random() * 2 * np.pi
     rel_obj = [(random.uniform(1, 2), 0)]
     
 
@@ -41,7 +42,7 @@ def generate_one_dynamic_training_trajectory(output_folder, obj_color, record_hz
     with open(os.path.join(sim_dir, 'colors.txt'), 'w') as f:
         f.write(str("".join(obj_color)))
 
-    sim = Simulator(obj_color, rel_obj, sim_dir, start_H, target_Hs, Theta, Theta_offset, record_hz)
+    sim = TrainSimulator(obj_color, rel_obj, sim_dir, start_H, target_Hs, Theta, Theta_offset, record_hz)
     
     sim.precompute_trajectory()
 
@@ -49,13 +50,13 @@ def generate_one_dynamic_training_trajectory(output_folder, obj_color, record_hz
     sim.run_simulation_to_completion()
 
     sim.export_plots()
-    sim.logger.save_as_csv(sim_name)  # Optional CSV save
+    sim.logger.save_as_csv(sim_name, sim.custom_timesteps if sim.custom_timesteps else None)  # Optional CSV save
 
 
 if __name__ == "__main__":
-    samples = 150
-    record_hz = 8
-    output_folder = f'train_d6_ss2_{samples}_{record_hz}hzf_td'
+    samples = 600
+    record_hz = 3 # not the actual hz
+    output_folder = f'train_d6_ss2_{samples}_rw025_3hzf_bm_pfff_td'
     OBJECTS = ["R", "B"]
     TOTAL_OBJECTS = OBJECTS
     NUM_INITIALIZATIONS = samples // len(OBJECTS)

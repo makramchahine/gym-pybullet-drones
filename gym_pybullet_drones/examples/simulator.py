@@ -39,11 +39,9 @@ NUM_SWITCHES = 30
 
 CRITICAL_DIST = 0.5
 CRITICAL_DIST_BUFFER = 0.1
-FINISH_COUNTER_THRESHOLD = 32
-# TURN_ANGLE = np.pi / 2
 
 
-class Simulator():
+class BaseSimulator():
     def __init__(self, ordered_objs, ordered_rel_locs, sim_dir, start_H, target_Hs, Theta, Theta_offset, record_hz):
         self.num_drones = DEFAULT_NUM_DRONES
         self.sim_dir = sim_dir
@@ -64,6 +62,7 @@ class Simulator():
 
         self.frame_counter = 0
         self.finish_counter = 0
+        self.reached_critical = False
         self.previously_reached_critical = False
         self.has_precomputed_trajectory = False
         self.alive_obj_previously_in_view = False
@@ -89,99 +88,6 @@ class Simulator():
         self.critical_dist = CRITICAL_DIST
         self.critical_dist_buffer = CRITICAL_DIST_BUFFER
 
-    def init_stable_trajectory(self):
-        for i in range(240):
-            self._step_trajectory(hold=True)
-
-    def _step_trajectory(self, hold=False):
-        """
-        Modifies:
-            self.TARGET_POS, self.TARGET_ATT, self.FINAL_THETA, self.reached_critical
-        """
-        speeds = []
-        for i, (target_pos, target_att, init_theta, final_theta, delta_theta, final_target, height) in enumerate(zip(self.TARGET_POS, self.TARGET_ATT, self.INIT_THETA, self.FINAL_THETA, self.DELTA_THETA, self.TARGET_LOCATIONS, self.TARGET_HS)):
-            last_pos = target_pos[-1]    # X, Y, Z
-            last_yaw = target_att[-1][2] # R, P, Y
-            last_height = target_pos[-1][2]
-            dist = distance_to_target(last_pos, final_target)
-            yaw_dist = signed_angular_distance(last_yaw, final_theta + self.Theta)
-            height_dist = height - last_height
-
-            lift_speed = 0
-            if hold:
-                speed = 0
-                yaw_speed = 0
-                new_theta = init_theta
-                lift_speed = 0
-            elif dist > self.critical_dist + self.critical_dist_buffer and not self.previously_reached_critical:
-                speed = DEFAULT_SPEED / self.control_freq_hz
-                yaw_speed = yaw_dist / self.control_freq_hz / 2
-                lift_speed = height_dist / self.control_freq_hz / 2
-                # yaw_speed = DEFAULT_SEARCHING_YAW * np.sign(yaw_dist) / self.control_freq_hz
-                # lift_speed = 0 if (abs(height_dist) < APPROX_CORRECT_HEIGHT) else STABILIZE_LIFT_MULTIPLIER * (height_dist / height) / self.control_freq_hz
-
-                if abs(yaw_dist) < APPROX_CORRECT_YAW:
-                    new_theta = final_theta + self.Theta
-                else:
-                    new_theta = last_yaw + yaw_speed
-                self.FINAL_THETA[0] = angle_between_two_points(last_pos[:2], final_target[:2]) - self.Theta
-            elif dist > self.critical_dist and not self.previously_reached_critical:
-                speed = interpolate_speeds(dist, self.critical_dist, self.critical_dist_buffer, DEFAULT_CRITICAL_SPEED, DEFAULT_SPEED) / self.control_freq_hz
-                yaw_speed = yaw_dist / self.control_freq_hz / 2
-                lift_speed = height_dist / self.control_freq_hz / 2
-                # yaw_speed = interpolate_speeds(dist, self.critical_dist, self.critical_dist_buffer, DEFAULT_CRITICAL_YAW_SPEED, DEFAULT_SEARCHING_YAW) * np.sign(yaw_dist) / self.control_freq_hz
-                # lift_speed = 0 if (abs(height_dist) < APPROX_CORRECT_HEIGHT) else STABILIZE_LIFT_MULTIPLIER * (height_dist / height) / self.control_freq_hz
-
-                if abs(yaw_dist) < APPROX_CORRECT_YAW:
-                    new_theta = final_theta + self.Theta
-                else:
-                    new_theta = last_yaw + yaw_speed
-            else:
-                speed = DEFAULT_CRITICAL_SPEED / self.control_freq_hz
-                yaw_speed = DEFAULT_SEARCHING_YAW * np.sign(yaw_dist) / self.control_freq_hz
-                if self.critical_action == 'R':
-                    yaw_speed += DEFAULT_CRITICAL_YAW_SPEED / self.control_freq_hz
-                elif self.critical_action == 'B':
-                    yaw_speed += -DEFAULT_CRITICAL_YAW_SPEED / self.control_freq_hz
-                elif self.critical_action == 'G':
-                    lift_speed = DEFAULT_LIFT_SPEED / self.control_freq_hz
-                    if not self.previously_reached_critical:
-                        self.FINAL_THETA[0] = angle_between_two_points(last_pos[:2], final_target[:2]) - self.Theta # continue to face target
-                else:
-                    assert False, f"critical_action: {self.critical_action}"
-                new_theta = last_yaw + yaw_speed
-
-
-            if self.critical_action == 'G':
-                delta_z = lift_speed if not self.previously_reached_critical else -DROP_SPEED / self.control_freq_hz * (last_height / DROP_MAX_HEIGHT)
-                self.reached_critical = dist < DEFAULT_DROP_POINT_DIST
-                new_height = max(last_height + delta_z, height)
-            else:
-                delta_z = lift_speed
-                self.reached_critical = dist < self.critical_dist
-                new_height = (last_height + delta_z) if (lift_speed != 0 or hold) else height
-        
-            delta_pos = convert_to_global([speed, 0], new_theta)
-            target_pos.append([last_pos[0] + delta_pos[0], last_pos[1] + delta_pos[1], new_height])
-            target_att.append([0, 0, new_theta])
-
-            speeds.append(speed)
-        self.frame_counter += 1
-        return speeds
-
-    def check_completed_all_goals(self):
-        return self.target_index >= len(self.ordered_objs)
-    
-    def check_completed_single_goal(self):
-        return self.finish_counter >= FINISH_COUNTER_THRESHOLD * 30
-
-    def check_exausted_steps(self):
-        if self.simulation_counter >= self.STEPS:
-            self.env.close()
-            return True
-        return False
-
-    def evaluate_trajectory(self) -> bool:
         if self.check_completed_all_goals():
             if self.frame_counter > (64 + 8) * self.simulation_freq_hz / self.record_freq_hz:
                 return True
@@ -200,25 +106,13 @@ class Simulator():
             print(f"Finished trajectory: {self.frame_counter}")
             return True
         return False
-    
-    def precompute_trajectory(self):
-        self.init_stable_trajectory()
-
-        finished = False
-        while not finished:
-            self._step_trajectory()
-            finished = self.evaluate_trajectory()
-
-        self.has_precomputed_trajectory = True
-
+        
     def increment_target(self):
-        print(f"inside increment target")
         self.target_index += 1
         if self.target_index < len(self.ordered_objs):
             cur_drone_pos = [convert_to_relative((self.TARGET_POS[d][-1][0], self.TARGET_POS[d][-1][1]), self.Theta) for d in range(self.num_drones)]
 
             self.FINAL_THETA = [angle_between_two_points(cur_drone_pos[0], self.ordered_rel_locs[self.target_index])]
-            print(f"self.ordered_rel_locs[self.target_index]: {self.ordered_rel_locs[self.target_index]}")
             self.TARGET_LOCATIONS = convert_array_to_global([self.ordered_rel_locs[self.target_index]], self.Theta)
             self.INIT_THETA = [target_att[-1][2] for target_att in self.TARGET_ATT]
             self.DELTA_THETA = [signed_angular_distance(init_theta, final_theta + self.Theta) for final_theta, init_theta in zip(self.FINAL_THETA, self.INIT_THETA)]
@@ -293,7 +187,7 @@ class Simulator():
         self.timestepwise_displacement_array = []
         self.vel_cmds = []
 
-        self.logger = Logger(logging_freq_hz=self.record_freq_hz,
+        self.logger = Logger(logging_freq_hz=self.simulation_freq_hz,
                 num_drones=self.num_drones,
                 output_folder="/".join(self.sim_dir.split('/')[:-1]),
                 colab=DEFAULT_COLAB,
@@ -301,141 +195,15 @@ class Simulator():
         
         os.makedirs(os.path.join(self.sim_dir, "pybullet_pics0"), exist_ok=True)
 
-    def step_simulation(self):
-        # print(f"self.simulation_counter: {self.simulation_counter}, and steps: {self.STEPS}")
-        recorded_image = False
-        while recorded_image == False and self.simulation_counter < self.STEPS:
-            obs, reward, done, info = self.env.step(self.action)
-
-            #* Compute step-by-step velocities for 240hz-trajectory; Control Frequency is 240hz
-            if self.simulation_counter % self.CTRL_EVERY_N_STEPS == 0:
-                for j in range(self.num_drones):
-                    state = obs[str(j)]["state"]
-                    self.action[str(j)], _, _ = self.ctrl[j].computeControlFromState(
-                        control_timestep=self.CTRL_EVERY_N_STEPS * self.env.TIMESTEP,
-                        state=state,
-                        target_pos = self.TARGET_POS[j, self.simulation_counter],
-                        target_rpy = self.TARGET_ATT[j, self.simulation_counter]
-                        )
-
-            #* Network Frequency is 30hz
-            if self.simulation_counter % self.REC_EVERY_N_STEPS == 0 and self.simulation_counter>self.env.SIM_FREQ:
-                for d in range(self.num_drones):
-                    rgb, dep, seg = self.env._getDroneImages(d)
-                    self.env._exportImage(img_type=ImageType.RGB,
-                                    img_input=rgb,
-                                    path=self.sim_dir + f"/pybullet_pics{d}",
-                                    frame_num=int(self.simulation_counter / self.REC_EVERY_N_STEPS),
-                                    )
-                    self.logger.log(drone=d,
-                           timestamp=round(self.simulation_counter / self.REC_EVERY_N_STEPS),
-                           state=obs[str(d)]["state"],
-                           control=np.hstack(
-                               [self.TARGET_POS[d, self.simulation_counter, 0:2], self.INIT_XYZS[j, 2], self.INIT_RPYS[j, :], np.zeros(6)])
-                           )
-                recorded_image = True
-
-            self.simulation_counter += 1
-        return state
-
-    def dynamic_step_simulation(self, vel_cmd):
-        self.vel_cmds.append(vel_cmd)
-
-        updated_action = False
-        while (self.simulation_counter % self.REC_EVERY_N_STEPS) != 0 or not updated_action:
-            # print(f"self.simulation_counter: {self.simulation_counter}, and mod: {self.simulation_counter % self.REC_EVERY_N_STEPS}, and updated_action: {updated_action}")
-            obs, reward, done, info = self.env.step(self.action)
-            state = obs[str(0)]["state"]
-            yaw = state[9]
-
-            #* Network Frequency is 30hz
-            if self.simulation_counter % self.REC_EVERY_N_STEPS == 0: # and self.simulation_counter>=self.env.SIM_FREQ:
-                for d in range(self.num_drones):
-                    rgb, dep, seg = self.env._getDroneImages(d)
-                    self.env._exportImage(img_type=ImageType.RGB,
-                                    img_input=rgb,
-                                    path=self.sim_dir + f"/pybullet_pics{d}",
-                                    frame_num=int(self.simulation_counter / self.CTRL_EVERY_N_STEPS),
-                                    )
-
-                self.vel_cmd_world = convert_vel_cmd_to_world_frame(vel_cmd, yaw)
-                
-                self.global_pos_array.append(get_x_y_z_yaw_relative_to_base_env(state, self.Theta))
-                # self.global_pos_array.append(self.get_x_y_z_yaw_global(state))
-
-                self.vel_array.append(get_vx_vy_vz_yawrate_rel_to_self(state))
-                if len(self.global_pos_array) > 1:
-                    # self.timestepwise_displacement_array.append(self.global_pos_array[-1] - self.global_pos_array[-2])
-                    self.timestepwise_displacement_array.append(get_relative_displacement(self.global_pos_array[-1], self.global_pos_array[-2]))
-                
-                updated_action = True
-                updated_state = state.copy()
-                
-            #* Compute step-by-step velocities for 240hz-trajectory; Control Frequency is 240hz
-            if self.simulation_counter % self.CTRL_EVERY_N_STEPS == 0:
-                self.action[str(0)], _, _ = self.ctrl[0].computeControl(control_timestep=self.CTRL_EVERY_N_STEPS * self.env.TIMESTEP,
-                                                    cur_pos=state[0:3],
-                                                    cur_quat=state[3:7],
-                                                    cur_vel=state[10:13],
-                                                    cur_ang_vel=state[13:16],
-                                                    target_pos=state[0:3],  # same as the current position
-                                                    target_rpy=np.array([0, 0, state[9]]),  # keep current yaw
-                                                    target_vel=self.vel_cmd_world[0:3],
-                                                    target_rpy_rates=np.array([0, 0, vel_cmd[3]])
-                                                    )
-
-            self.simulation_counter += 1
-        self.process_achieved_goal_in_simulator(state)
-        finished = self.evaluate_dynamic_simulator()
-        return updated_state, rgb, finished
-
-    def evaluate_dynamic_simulator(self) -> bool:
-        """ Returns if all objectives complete """
-        if self.finish_counter > 0:
-            print(f"Incrementing target")
-            self.increment_target()
-        if self.check_completed_all_goals():
-            return True
-        return False
+        rgb, dep, seg = self.env._getDroneImages(0)
+        self.env._exportImage(img_type=ImageType.RGB,
+                img_input=rgb,
+                path=self.sim_dir + f"/pybullet_pics{0}",
+                frame_num=int(self.simulation_counter),
+                )
 
     def get_latest_displacement(self):
         return self.timestepwise_displacement_array[-1]
-                    
-    def run_simulation_to_completion(self):
-        """ Creates training images with the stored trajectory """
-        self.setup_simulation()
-        while not self.check_exausted_steps():
-            state = self.step_simulation()
-            self.global_pos_array.append(get_x_y_z_yaw_relative_to_base_env(state, self.Theta))
-            self.vel_array.append(get_vx_vy_vz_yawrate_rel_to_self(state))
-
-            if len(self.global_pos_array) > 1:
-                global_disp = self.global_pos_array[-1] - self.global_pos_array[-2]
-                rel_disp = get_relative_displacement(self.global_pos_array[-1], self.global_pos_array[-2])
-                # print(global_disp - rel_disp)
-                self.timestepwise_displacement_array.append(rel_disp)
-
-    def process_achieved_goal_in_simulator(self, state):
-        # extract positions
-        x, y, z = state[0], state[1], state[2]
-        yaw = state[9]
-
-        print(f"self.obj_loc_global: {self.obj_loc_global}")
-        print(f"self.target_index: {self.target_index}")
-        if object_in_view(x, y, yaw, self.obj_loc_global[self.target_index]):
-            self.alive_obj_previously_in_view = True
-
-        if not object_in_view(x, y, yaw, self.obj_loc_global[self.target_index]) and self.alive_obj_previously_in_view:
-            if (self.ordered_objs[self.target_index] == 'R' and drone_turned_left(x, y, yaw, self.obj_loc_global[self.target_index]) or (self.ordered_objs[self.target_index] == 'B' and drone_turned_right(x, y, yaw, self.obj_loc_global[self.target_index]))):
-                self.window_outcomes.append(self.ordered_objs[self.target_index])
-                self.finish_counter += 1
-                print(self.ordered_objs[self.target_index])
-            elif self.ordered_objs[self.target_index] == 'R' or self.ordered_objs[self.target_index] == 'B':
-                self.window_outcomes.append("N")
-                self.finish_counter += 1
-                print(f"N: {self.ordered_objs[self.target_index]}")
-            
-            self.alive_obj_previously_in_view = False
 
     def export_plots(self):
         x_data = np.array(self.global_pos_array)[:, 0]
@@ -500,14 +268,3 @@ class Simulator():
         if self.vel_cmds:
             np.savetxt(os.path.join(self.sim_dir, 'vel_cmds.csv'), np.array(self.vel_cmds), delimiter=',')
 
-        try:
-            with open(os.path.join(self.sim_dir, 'finish.txt'), 'w') as f:
-                max_len = max(len(self.window_outcomes), len(self.ordered_objs))
-                # pad self.window_outcomes, self.ordered_objs with X's if they are too short
-                self.window_outcomes = self.window_outcomes + ['X'] * (max_len - len(self.window_outcomes))
-                self.ordered_objs = self.ordered_objs + ['X'] * (max_len - len(self.ordered_objs))
-
-                for window_outcome, color in zip(self.window_outcomes, self.ordered_objs):
-                    f.write(f"{window_outcome},{color}\n")
-        except Exception as e:
-            print(e)
