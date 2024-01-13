@@ -20,6 +20,7 @@ def generate_init_conditions_and_save_to_folder(sim_dir):
         Theta_offset = random.uniform(0.175 * np.pi, -0.175 * np.pi)
     target_Hs = [0.1 + 0.5]
     Theta = random.random() * 2 * np.pi
+    # rel_obj = [(1, 0)]
     rel_obj = [(random.uniform(1, 2), 0)]
     
 
@@ -54,9 +55,9 @@ def generate_one_dynamic_training_trajectory(output_folder, obj_color, record_hz
 
 
 if __name__ == "__main__":
-    samples = 600
+    samples = 400
     record_hz = 3 # not the actual hz
-    output_folder = f'train_d6_ss2_{samples}_rw025_3hzf_bm_pfff_td'
+    output_folder = f'train_d6_ss2_{samples}_3hzf_bm_px_td_nlsp_gn_nt'
     OBJECTS = ["R", "B"]
     TOTAL_OBJECTS = OBJECTS
     NUM_INITIALIZATIONS = samples // len(OBJECTS)

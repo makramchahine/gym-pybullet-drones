@@ -10,7 +10,7 @@ from culekta_utils import *
 from simulator_utils import *
 from simulator import BaseSimulator
 
-FINISH_COUNTER_THRESHOLD = 0
+FINISH_COUNTER_THRESHOLD = 1.5 # in seconds
 
 class EvalSimulator(BaseSimulator):
     def __init__(self, ordered_objs, ordered_rel_locs, sim_dir, start_H, target_Hs, Theta, Theta_offset, record_hz):
@@ -20,7 +20,7 @@ class EvalSimulator(BaseSimulator):
         return self.target_index >= len(self.ordered_objs)
     
     def check_completed_single_goal(self):
-        return self.finish_counter >= FINISH_COUNTER_THRESHOLD * 30
+        return self.finish_counter >= FINISH_COUNTER_THRESHOLD * self.record_freq_hz
 
     def check_exausted_steps(self):
         if self.simulation_counter >= self.STEPS:
@@ -77,35 +77,27 @@ class EvalSimulator(BaseSimulator):
 
             self.simulation_counter += 1
         self.evaluate_completed_single_task(state)
-        finished = self.increment_and_break_if_complete()
+        finished = self.check_completed_all_goals()
         return updated_state, rgb, finished
-
-    def increment_and_break_if_complete(self) -> bool:
-        """ Returns if all objectives complete """
-        if self.finish_counter > 0:
-            pass
-            # self.increment_target()
-        if self.check_completed_all_goals():
-            return False
-        return False
 
 
     def evaluate_completed_single_task(self, state):
         # extract positions
         x, y, z = state[0], state[1], state[2]
         yaw = state[9]
+        print(f"{self.target_index} {self.finish_counter} {object_in_view(x, y, yaw, self.obj_loc_global[self.target_index])} get_relative_angle_to_target(x, y, yaw, xy_target): {get_relative_angle_to_target(x, y, yaw, self.obj_loc_global[self.target_index])}")
 
         if object_in_view(x, y, yaw, self.obj_loc_global[self.target_index]):
             self.alive_obj_previously_in_view = True
+            return
 
         if not object_in_view(x, y, yaw, self.obj_loc_global[self.target_index]) and self.alive_obj_previously_in_view:
             if (self.ordered_objs[self.target_index] == 'R' and drone_turned_left(x, y, yaw, self.obj_loc_global[self.target_index]) or (self.ordered_objs[self.target_index] == 'B' and drone_turned_right(x, y, yaw, self.obj_loc_global[self.target_index]))):
                 self.window_outcomes.append(self.ordered_objs[self.target_index])
-                self.finish_counter += 1
+                self.target_index += 1
             elif self.ordered_objs[self.target_index] == 'R' or self.ordered_objs[self.target_index] == 'B':
                 self.window_outcomes.append("N")
-                self.finish_counter += 1
-            
+                self.target_index += 1
             self.alive_obj_previously_in_view = False
 
     def export_plots(self):
