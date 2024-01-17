@@ -66,7 +66,7 @@ DEFAULT_AGGREGATE = True
 DEFAULT_OBSTACLES = True
 DEFAULT_SIMULATION_FREQ_HZ = 240
 DEFAULT_CONTROL_FREQ_HZ = 240
-DEFAULT_SAMPLING_FREQ_HQ = 8
+DEFAULT_SAMPLING_FREQ_HQ = 3
 DEFAULT_COLAB = False
 DEFAULT_PARAMS_PATH = None
 DEFAULT_CHECKPOINT_PATH = None
@@ -95,6 +95,7 @@ def run(
         params_path = DEFAULT_PARAMS_PATH,
         checkpoint_path = DEFAULT_CHECKPOINT_PATH
 ):
+    record_hz = DEFAULT_SAMPLING_FREQ_HQ
     ordered_objs, ordered_locs = loc_color_tuple
     print(f"ordered_objs: {ordered_objs}")
     print(f"ordered_locs: {ordered_locs}")
@@ -200,7 +201,11 @@ def run(
     REC_EVERY_N_STEPS = int(np.floor(env.SIM_FREQ / DEFAULT_SAMPLING_FREQ_HQ))
     action = {str(i): np.array([0, 0, 0, 0]) for i in range(num_drones)}
     START = time.time()
-    STEPS = CTRL_EVERY_N_STEPS * NUM_WP
+    # STEPS = CTRL_EVERY_N_STEPS * NUM_WP
+    # STEPS = int(100 * 90 * 240.0 * record_hz / 8.0) * 2
+    # STEPS = int(100 * 90 * 90) * 2
+    # 30 seconds * 240 steps/sec
+    STEPS = int(100 * 30 * 240) * 2
 
     time_data = []
     x_data = [[] for _ in range(num_drones)]
@@ -217,9 +222,13 @@ def run(
     finished_within_time_flag = False
     window_outcomes = []
     range_outcomes = []
+    last_successful_ball_frame = 0
+    SUCCESS_TIMEOUT = 13500 * 3 * 2
     for i in trange(0, int(STEPS), AGGR_PHY_STEPS):
         if target_index > len(ordered_objs) - 1:
             finished_within_time_flag = True
+            break
+        if i > last_successful_ball_frame + SUCCESS_TIMEOUT:
             break
 
         #### Step the simulation ###################################
@@ -238,14 +247,16 @@ def run(
                                  )
 
                 rgb = rgb[None,:,:,0:3]
-                plt.imsave(f'{sim_dir}/rgb_images/rgb_{d}_{i}.png', rgb[0])
+                # plt.imsave(f'{sim_dir}/rgb_images/rgb_{d}_{i}.png', rgb[0])
                 imgs[d] = rgb
 
-            inputs = [*imgs, *hiddens]
+            # inputs = [*imgs, *hiddens]
+            inputs = [*imgs, np.array(1.0 / record_hz * 5).reshape(-1, 1), *hiddens]
             out = single_step_model.predict(inputs)
             if normalize_path is not None:
                 out[0][0] = out[0][0] * np_std + np_mean
             vel_cmd = out[0][0]  # shape: 1 x 8
+            vel_cmd[0] = vel_cmd[0] * 0.5 #scale forward speed by 1/2
             vel_cmds[0] = copy.deepcopy(vel_cmd[:4])
             if num_drones > 1:
                 vel_cmds[1] = copy.deepcopy(vel_cmd[4:])
@@ -293,6 +304,7 @@ def run(
                 elif not object_in_view(x, y, yaw, obj_loc_global[target_index]) and alive_obj_previously_in_view:
                     if (ordered_objs[target_index] == 'R' and drone_turned_left(x, y, yaw, obj_loc_global[target_index]) or (ordered_objs[target_index] == 'B' and drone_turned_right(x, y, yaw, obj_loc_global[target_index]))):
                         window_outcomes.append(ordered_objs[target_index])
+                        last_successful_ball_frame = i
                     elif ordered_objs[target_index] == 'R' or ordered_objs[target_index] == 'B':
                         window_outcomes.append("N")
                     if object_in_range(x, y, obj_loc_global[target_index]):

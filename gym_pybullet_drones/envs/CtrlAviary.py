@@ -114,10 +114,10 @@ class CtrlAviary(BaseAviary):
         #             [0, 0, 0],
         #             physicsClientId=self.CLIENT
         # )
-        samurai_id = p.loadURDF("samurai.urdf",
-                    [0, 0, 0],
-                   physicsClientId=self.CLIENT
-                   )
+        # samurai_id = p.loadURDF("samurai.urdf",
+        #             [0, 0, 0],
+        #            physicsClientId=self.CLIENT
+        #            )
         # stadium_id = p.loadSDF("stadium.sdf",
         #             physicsClientId=self.CLIENT
         #             )
@@ -132,6 +132,8 @@ class CtrlAviary(BaseAviary):
                     'B': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2blue.urdf",
                     'G': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2green.urdf",
                 }
+
+                print(f"added {color} at {location}")
                 
                 p.loadURDF(filename_map[color],
                         [*location, 0.1 + 0.5],

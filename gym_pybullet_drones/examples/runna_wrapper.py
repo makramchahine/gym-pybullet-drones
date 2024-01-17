@@ -66,18 +66,21 @@ DEFAULT_COLAB = False
 
 # normalize_path = '/home/makramchahine/repos/drone_multimodal/clean_train_h0f_hr_300/mean_std.csv'
 # base_runner_folder = "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_h0f_hr_300_og_600sf"
-normalize_path = "/home/makramchahine/repos/drone_multimodal/clean_train_d3_300/mean_std.csv"
-base_runner_folder = "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d3_300_srf_600sf"
+# normalize_path = "/home/makramchahine/repos/drone_multimodal/clean_train_d3_300/mean_std.csv"
+# base_runner_folder = "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d3_300_srf_600sf"
+normalize_path = None
+base_runner_folder = "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_600_1_10hzf_bm_px_td_nlsp_gn_nt_pybullet_srf_300sf_irreg2_64_hyp_cfc"
 tag_name = "_".join(base_runner_folder.split('/')[-1].split('_')[1:])
-multi = False
+multi = True
 vanish = False
 if multi:
     tag_name = tag_name + '_multi'
     DEFAULT_DURATION_SEC = DEFAULT_DURATION_SEC * 3
-if vanish:
-    tag_name = tag_name + '_vanish'
-tag_name = tag_name + '_debug_cuda'
+# if vanish:
+#     tag_name = tag_name + '_vanish_60deg'
+tag_name = tag_name + '_05sf_vanish_60deg'
 DEFAULT_OUTPUT_FOLDER = f'cl_{tag_name}'
+RUNS_PER_MODEL = 10
 
 if __name__ == "__main__":
     #### Define and parse (optional) arguments for the script ##
@@ -133,8 +136,8 @@ if __name__ == "__main__":
     else:
         print("No .json files found in the directory.")
 
-    if not multi and hdf5_file_path and json_file_path and not os.path.exists(os.path.join(DEFAULT_OUTPUT_FOLDER, 'val')):
-        for _ in range(16):
+    if hdf5_file_path and json_file_path and not os.path.exists(os.path.join(DEFAULT_OUTPUT_FOLDER, 'val')):
+        for _ in range(RUNS_PER_MODEL):
             concurrent_checkpoint_paths.append(hdf5_file_path)
             concurrent_params_paths.append(json_file_path)
             output_folder_paths.append(os.path.join(DEFAULT_OUTPUT_FOLDER, 'val'))
@@ -148,7 +151,7 @@ if __name__ == "__main__":
         # parse "epoch-%d" from hdf5 filename
         epoch_num = int(re.findall(r'epoch-(\d+)', hdf5_file_path)[0])
         print(epoch_num)
-        epoch_filter = [100]
+        epoch_filter = []
         if multi and use_epoch_filter and epoch_num not in epoch_filter:
             continue
 
@@ -157,7 +160,7 @@ if __name__ == "__main__":
         if os.path.exists(os.path.join(DEFAULT_OUTPUT_FOLDER, f'recurrent{epoch_num}')):
             print(f"skipping epoch {epoch_num}")
             continue
-        for _ in range(15):
+        for _ in range(RUNS_PER_MODEL):
             if os.path.exists(os.path.join(base_runner_folder, 'recurrent', f'params{epoch_num}.json')):
                 concurrent_checkpoint_paths.append(hdf5_file_path)
                 concurrent_params_paths.append(os.path.join(base_runner_folder, 'recurrent', f'params{epoch_num}.json'))
@@ -170,13 +173,16 @@ if __name__ == "__main__":
     returns = []
 
     NUM_INITIALIZATIONS = 1
-    OBJECTS = ["R", "G", "B"]
+    OBJECTS = ["R", "B"]
     # OBJECTS = ["R", "R", "G", "B", "B"] * NUM_INITIALIZATIONS
     if multi:
-        PERMUTATIONS_COLORS = [list(perm) for perm in itertools.combinations_with_replacement(OBJECTS, 3)]
-        OBJECTS = [random.sample(PERMUTATIONS_COLORS, 1)[0] for _ in range(len(output_folder_paths))]
+        # PERMUTATIONS_COLORS = [list(perm) for perm in itertools.combinations_with_replacement(OBJECTS, 100)]
+        # OBJECTS = [random.sample(PERMUTATIONS_COLORS, 1)[0] for _ in range(len(output_folder_paths))]
+        # OBJECTS = [random.choices(OBJECTS, k=100) for _ in range(len(output_folder_paths))]
+        OBJECTS = [['B', 'B', 'R', 'B', 'R', 'R', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B'], ['B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'B', 'B'], ['R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'R'], ['R', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'B'], ['R', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'R'], ['R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'R'], ['B', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'R'], ['B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B'], ['B', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'B'], ['R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'B', 'B', 'B']]
         LOCATIONS_REL = []
         for targets in OBJECTS:
+            print(targets)
             locations = []
             cur_point = (0, 0) #random.uniform(0.75, 1.5)
             cur_direction = 0 
@@ -187,11 +193,11 @@ if __name__ == "__main__":
                 locations.append(target_loc)
 
                 if target[0] == 'R':
-                    cur_direction += math.pi / 2
+                    cur_direction += math.pi / 3
                 elif target[0] == 'G':
                     cur_direction += 0
                 elif target[0] == 'B':
-                    cur_direction += -math.pi / 2
+                    cur_direction += -math.pi / 3
             LOCATIONS_REL.append(locations)
     else:
         OBJECTS = OBJECTS * (len(output_folder_paths) // 3)#[[random.choice(OBJECTS)] for _ in range(len(output_folder_paths))]
@@ -204,7 +210,7 @@ if __name__ == "__main__":
         total_list.append((obj, loc))
 
     # assert len(total_list) == NUM_INITIALIZATIONS * 16 * 5, f"len(total_list): {len(total_list)}"
-    joblib.Parallel(n_jobs=16)(joblib.delayed(run)(d, normalize_path=normalize_path, output_folder=output_folder_path, params_path=params_path, checkpoint_path=checkpoint_path, duration_sec=DEFAULT_DURATION_SEC) for d, params_path, checkpoint_path, output_folder_path in tqdm(zip(total_list, concurrent_params_paths, concurrent_checkpoint_paths, output_folder_paths)))
+    joblib.Parallel(n_jobs=10)(joblib.delayed(run)(d, output_folder=output_folder_path, params_path=params_path, checkpoint_path=checkpoint_path, duration_sec=DEFAULT_DURATION_SEC) for d, params_path, checkpoint_path, output_folder_path in tqdm(zip(total_list, concurrent_params_paths, concurrent_checkpoint_paths, output_folder_paths)))
     # for d, params_path, checkpoint_path, output_folder_path in zip(total_list, concurrent_params_paths, concurrent_checkpoint_paths, output_folder_paths):
     #     run(d, normalize_path=normalize_path, output_folder=output_folder_path, params_path=params_path, checkpoint_path=checkpoint_path, duration_sec=DEFAULT_DURATION_SEC)
 
