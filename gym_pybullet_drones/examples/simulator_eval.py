@@ -80,24 +80,40 @@ class EvalSimulator(BaseSimulator):
         finished = self.check_completed_all_goals()
         return updated_state, rgb, finished
 
+    def safe_update_target_index(self):
+        self.target_index += 1
+        if self.target_index >= len(self.ordered_objs):
+            self.target_index = len(self.ordered_objs) - 1
 
     def evaluate_completed_single_task(self, state):
         # extract positions
         x, y, z = state[0], state[1], state[2]
         yaw = state[9]
-        print(f"{self.target_index} {self.finish_counter} {object_in_view(x, y, yaw, self.obj_loc_global[self.target_index])} get_relative_angle_to_target(x, y, yaw, xy_target): {get_relative_angle_to_target(x, y, yaw, self.obj_loc_global[self.target_index])}")
+        # print(f"{self.target_index} {self.finish_counter} {object_in_view(x, y, yaw, self.obj_loc_global[self.target_index])} get_relative_angle_to_target(x, y, yaw, xy_target): {get_relative_angle_to_target(x, y, yaw, self.obj_loc_global[self.target_index])}")
 
         if object_in_view(x, y, yaw, self.obj_loc_global[self.target_index]):
             self.alive_obj_previously_in_view = True
             return
 
         if not object_in_view(x, y, yaw, self.obj_loc_global[self.target_index]) and self.alive_obj_previously_in_view:
+            # Correct turn
             if (self.ordered_objs[self.target_index] == 'R' and drone_turned_left(x, y, yaw, self.obj_loc_global[self.target_index]) or (self.ordered_objs[self.target_index] == 'B' and drone_turned_right(x, y, yaw, self.obj_loc_global[self.target_index]))):
+                print(f"Correct turn for {self.target_index}")
+                # Remove ball then add next object
+                # if self.vanish_mode:
+                #     self.env.removeObject(self.alive_obj_id)
+                #     print(f"Removed Item: {self.alive_obj_id}")
+                #     if not (self.target_index > len(self.ordered_objs) - 1):
+                #         self.alive_obj_id = self.env.addObject(self.ordered_objs[self.target_index], self.obj_loc_global[self.target_index])
+                #         print(f"New Item: {self.alive_obj_id}")
+
                 self.window_outcomes.append(self.ordered_objs[self.target_index])
-                self.target_index += 1
+                # self.target_index += 1
+                self.safe_update_target_index()
             elif self.ordered_objs[self.target_index] == 'R' or self.ordered_objs[self.target_index] == 'B':
                 self.window_outcomes.append("N")
-                self.target_index += 1
+                # self.target_index += 1
+                self.safe_update_target_index()
             self.alive_obj_previously_in_view = False
 
     def export_plots(self):
