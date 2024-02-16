@@ -124,7 +124,12 @@ class BaseSimulator():
             self.previously_reached_critical = False
             self.start_dropping = False
 
-    def setup_simulation(self, drone=DEFAULT_DRONES):
+    def setup_simulation(self, drone=DEFAULT_DRONES, custom_obj_location=None):
+        if custom_obj_location is None:
+            custom_obj_location = {
+                "colors": self.ordered_objs,
+                "locations": self.obj_loc_global
+            }
         if DEFAULT_VISION:
             self.env = VisionAviary(drone_model=drone,
                             num_drones=self.num_drones,
@@ -151,10 +156,7 @@ class BaseSimulator():
                             record=DEFAULT_RECORD_VISION,
                             obstacles=DEFAULT_OBSTACLES,
                             user_debug_gui=DEFAULT_USER_DEBUG_GUI,
-                            custom_obj_location={
-                                    "colors": self.ordered_objs,
-                                    "locations": self.obj_loc_global
-                                }
+                            custom_obj_location=custom_obj_location
                             )
         self.env.IMG_RES = np.array([256, 144])
 

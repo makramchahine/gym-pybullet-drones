@@ -1,49 +1,23 @@
-"""Script demonstrating the joint use of simulation and control.
-
-The simulation is run by a `CtrlAviary` or `VisionAviary` environment.
-The control is given by the PID implementation in `DSLPIDControl`.
-
-Example
--------
-In a terminal, run as:
-
-    $ python fly.py
-
-Notes
------
-The drones move, at different altitudes, along cicular trajectories
-in the X-Y plane, around point (0, 0).
-
-"""
 import os
 import sys
 import time
-import argparse
 from datetime import datetime
-import pdb
 import csv
-import math
 import random
 import numpy as np
 import pandas as pd
 import pybullet as p
 import matplotlib.pyplot as plt
-import cv2
 import copy
-import glob
-import re
 
 from tqdm import trange
-from PIL import Image
 
 from gym_pybullet_drones.utils.enums import DroneModel, Physics, ImageType
 from gym_pybullet_drones.envs.CtrlAviary import CtrlAviary
 from gym_pybullet_drones.envs.VisionAviary import VisionAviary
-from gym_pybullet_drones.envs.VelocityAviary import VelocityAviary
 from gym_pybullet_drones.control.DSLPIDControl import DSLPIDControl
 from gym_pybullet_drones.control.SimplePIDControl import SimplePIDControl
 from gym_pybullet_drones.utils.Logger import Logger
-from gym_pybullet_drones.utils.out_2_way import out2way
 from gym_pybullet_drones.utils.utils import sync, str2bool
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -343,12 +317,6 @@ def run(
                     vel_cmd_writer = csv.writer(vel_cmd_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
                     vel_cmd_writer.writerow([i, *vel_cmds[d]])
 
-                # logger.log(drone=j,
-                #            timestamp=int(i / CTRL_EVERY_N_STEPS),
-                #            state=obs[str(j)]["state"],
-                #            control=action[str(j)],
-                #            )
-
         #### Sync the simulation ###################################
         if gui:
             sync(i, START, env.TIMESTEP)
@@ -374,21 +342,6 @@ def run(
     except Exception as e:
         print(e)
 
-    from matplotlib.collections import LineCollection
-    def plot_color_line(fig, ax, x, y, t, color="viridis", alpha=1.0):
-        # Create a set of line segments
-        points = np.array([x, y]).T.reshape(-1, 1, 2)
-        segments = np.concatenate([points[:-1], points[1:]], axis=1)
-
-        # Create a continuous norm to map from data points to colors
-        norm = plt.Normalize(t.min(), t.max())
-        lc = LineCollection(segments, cmap=color, norm=norm, alpha=alpha)
-        # Set the values used for colormapping
-        lc.set_array(t)
-        lc.set_linewidth(2)
-
-        line = ax.add_collection(lc)
-        fig.colorbar(line, ax=ax)
 
     # plot XY data
     time_data, x_data, y_data = np.array(time_data), np.array(x_data), np.array(y_data)

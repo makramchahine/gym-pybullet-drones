@@ -18,18 +18,8 @@ def get_x_y_z_yaw_global(state):
     return np.array([state[0], state[1], state[2], state[9]])
 
 def get_relative_displacement(later_state, earlier_state, environment_theta):
-    # print(f"later_state_xy: {later_state[0:2]}")
-    # print(f"earlier_state_xy: {earlier_state[0:2]}")
-    # print(f"x_diff: {later_state[0] - earlier_state[0]}")
-    # print(f"y_diff: {later_state[1] - earlier_state[1]}")
-    # print(f"yaw: {earlier_state[3]}")
-    # print(f"relative_xy: {relative_xy}\n")
     relative_xy = convert_to_relative([later_state[0] - earlier_state[0], later_state[1] - earlier_state[1]], earlier_state[3] + environment_theta)
     return np.array([relative_xy[0], relative_xy[1], later_state[2] - earlier_state[2], signed_angular_distance(earlier_state[3], later_state[3])])
-
-    # relative_xy_later = convert_to_relative([later_state[0], later_state[1]], earlier_state[3])
-    # relative_xy_earlier = convert_to_relative([earlier_state[0], earlier_state[1]], earlier_state[3])
-    # return np.array([relative_xy_later[0] - relative_xy_earlier[0], relative_xy_later[1] - relative_xy_earlier[1], later_state[2] - earlier_state[2], signed_angular_distance(earlier_state[3], later_state[3])])
 
 def get_x_y_z_yaw_rel_to_self(state, previous_yaw):
     # Convert to relative drone coordinates by factoring in self.Theta

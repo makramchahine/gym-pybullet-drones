@@ -1,15 +1,24 @@
 import numpy as np
 from gym import spaces
+import pybullet as p
 
 from gym_pybullet_drones.envs.BaseAviary import BaseAviary
 from gym_pybullet_drones.utils.enums import DroneModel, Physics
-import pybullet as p
+
+# TODO: Change to relative
+filename_map = {
+    'R': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2red.urdf",
+    'B': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2blue.urdf",
+    'G': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2green.urdf",
+}
+# filename_map = {
+#     'R': "sphere2red.urdf",
+#     'B': "sphere2blue.urdf",
+#     'G': "sphere2green.urdf",
+# }
 
 class CtrlAviary(BaseAviary):
     """Multi-drone environment class for control applications."""
-
-    ################################################################################
-
     def __init__(self,
                  drone_model: DroneModel=DroneModel.CF2X,
                  num_drones: int=1,
@@ -80,11 +89,6 @@ class CtrlAviary(BaseAviary):
         This method is called by the parent class constructor.
 
         """
-        filename_map = {
-            'R': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2red.urdf",
-            'B': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2blue.urdf",
-            'G': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2green.urdf",
-        }
         assert color in filename_map.keys(), "Color not supported"
                 
         return p.loadURDF(filename_map[color],
@@ -103,35 +107,12 @@ class CtrlAviary(BaseAviary):
         These obstacles are loaded from standard URDF files included in Bullet.
 
         """
-        # p.removeBody(self.PLANE_ID)
-        # p.loadURDF("custom_lawn.urdf",
-        #         #    [-1.3, -0.27, -0.07],
-        #            physicsClientId=self.CLIENT
-        #            )
-        # change background to sky blue
-        # p.changeVisualShape(p.loadURDF("plane.urdf"), -1, rgbaColor=[0.69, 0.847, 0.902, 1])
-        # p.loadURDF("random_urdfs/297/297.urdf",
-        #             [0, 0, 0],
-        #             physicsClientId=self.CLIENT
-        # )
-        # samurai_id = p.loadURDF("samurai.urdf",
-        #             [0, 0, 0],
-        #            physicsClientId=self.CLIENT
-        #            )
-        # stadium_id = p.loadSDF("stadium.sdf",
-        #             physicsClientId=self.CLIENT
-        #             )
         if self.CUSTOM_OBJECT_LOCATION is None:
             return
         # if self.CUSTOM_OBJECT_LOCATION is a list of tuples:
         elif type(self.CUSTOM_OBJECT_LOCATION) is dict and "colors" in self.CUSTOM_OBJECT_LOCATION.keys() and "locations" in self.CUSTOM_OBJECT_LOCATION.keys():
             for color, location in zip(self.CUSTOM_OBJECT_LOCATION["colors"], self.CUSTOM_OBJECT_LOCATION["locations"]):
                 # add new urdf files at /home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/samurai.urdf
-                filename_map = {
-                    'R': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2red.urdf",
-                    'B': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2blue.urdf",
-                    'G': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2green.urdf",
-                }
 
                 print(f"added {color} at {location}")
                 
@@ -141,27 +122,10 @@ class CtrlAviary(BaseAviary):
                         physicsClientId=self.CLIENT,
                         globalScaling=0.2
                         )
-        elif type(self.CUSTOM_OBJECT_LOCATION) is list and type(self.CUSTOM_OBJECT_LOCATION[0]) is tuple:
-            # for obj in self.CUSTOM_OBJECT_LOCATION:
-            p.loadURDF("/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2blue.urdf",
-                    [*self.CUSTOM_OBJECT_LOCATION[0], 0.1],
-                    p.getQuaternionFromEuler([0,0,0]),
-                    physicsClientId=self.CLIENT,
-                    globalScaling=0.2
-                    )
-            p.loadURDF("/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2red.urdf",
-                    [*self.CUSTOM_OBJECT_LOCATION[1], 0.1],
-                    p.getQuaternionFromEuler([0,0,0]),
-                    physicsClientId=self.CLIENT,
-                    globalScaling=0.2
-                    )
-        else:
-            p.loadURDF("/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2red.urdf",
-                   [*self.CUSTOM_OBJECT_LOCATION, 0.1],
-                   p.getQuaternionFromEuler([0,0,0]),
-                   physicsClientId=self.CLIENT,
-                   globalScaling=0.2
-                   )
+            
+        p.loadURDF("samurai.urdf",
+            physicsClientId=self.CLIENT
+        )
 
     def _actionSpace(self):
         """Returns the action space of the environment.

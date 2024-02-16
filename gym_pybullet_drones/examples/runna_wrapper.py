@@ -1,44 +1,18 @@
-"""Script demonstrating the joint use of simulation and control.
-
-The simulation is run by a `CtrlAviary` or `VisionAviary` environment.
-The control is given by the PID implementation in `DSLPIDControl`.
-
-Example
--------
-In a terminal, run as:
-
-    $ python fly.py
-
-Notes
------
-The drones move, at different altitudes, along circular trajectories
-in the X-Y plane, around point (0, 0).
-
-"""
 import os
-import copy
-import time
 import argparse
-from datetime import datetime
-import pdb
 import math
 import random
 import numpy as np
 import pybullet as p
-import matplotlib.pyplot as plt
-import itertools
 import glob
 import re
-
-import os
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
-
 from tqdm import tqdm
-from functools import partial
 import joblib
-
+import subprocess
 import sys
+
 sys.path.append("/home/makramchahine/repos")
 sys.path.append("/home/makramchahine/repos/gym-pybullet-drones")
 sys.path.append("/home/makramchahine/repos/gym-pybullet-drones/gym_pybullet_drones")
@@ -48,9 +22,6 @@ from gym_pybullet_drones.utils.enums import DroneModel, Physics
 from gym_pybullet_drones.utils.utils import sync, str2bool
 
 from runna_hike import run
-from culekta_utils import PERMUTATIONS_COLORS
-
-import tensorflow as tf
 
 DEFAULT_DRONES = DroneModel("cf2x")
 DEFAULT_NUM_DRONES = 1
@@ -72,10 +43,6 @@ multi = True
 vanish = False
 RUNS_PER_MODEL = 10
 
-# normalize_path = '/home/makramchahine/repos/drone_multimodal/clean_train_h0f_hr_300/mean_std.csv'
-# base_runner_folder = "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_h0f_hr_300_og_600sf"
-# normalize_path = "/home/makramchahine/repos/drone_multimodal/clean_train_d3_300/mean_std.csv"
-# base_runner_folder = "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d3_300_srf_600sf"
 normalize_path = None
 base_runner_folders = [
 #    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_600_1_10hzf_bm_px_td_nlsp_gn_nt_srf_300sf_irreg2_64_hyp_cfc",
@@ -103,15 +70,6 @@ variable_timesteps = [
     # False,
     # False
 ]
-# base_runner_folder = "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_600_1_10hzf_bm_px_td_nlsp_gn_nt_pybullet_srf_300sf_irreg2_64_hyp_cfc"
-# tag_name = "_".join(base_runner_folder.split('/')[-1].split('_')[1:])
-# if multi:
-#     tag_name = tag_name + '_multi'
-#     DEFAULT_DURATION_SEC = DEFAULT_DURATION_SEC * 3
-# if vanish:
-#     tag_name = tag_name + '_vanish_60deg'
-# tag_name = tag_name + '_05sf_vanish_60deg'
-# DEFAULT_OUTPUT_FOLDER = f'cl_{tag_name}'
 tag_names = ["_".join(base_runner_folder.split('/')[-1].split('_')[1:]) for base_runner_folder in base_runner_folders]
 tag_names = [tag_name + "_multi" if multi else tag_name for tag_name in tag_names]
 tag_names = [tag_name + "_vanish_60deg_100_sam_pnorm_at3hz" for tag_name in tag_names] 
@@ -197,8 +155,6 @@ if __name__ == "__main__":
             if multi and use_epoch_filter and epoch_num not in epoch_filter:
                 continue
 
-            # print(os.path.join(DEFAULT_OUTPUT_FOLDER, f'recurrent{epoch_num}'))
-            # print(os.path.exists(os.path.join(DEFAULT_OUTPUT_FOLDER, f'recurrent{epoch_num}')))
             if os.path.exists(os.path.join(default_output_folder, f'recurrent{epoch_num}')):
                 print(f"skipping epoch {epoch_num}")
                 continue
@@ -219,16 +175,13 @@ if __name__ == "__main__":
     NUM_INITIALIZATIONS = 1
     OBJECTS = ["R", "B"]
     if multi:
-        # PERMUTATIONS_COLORS = [list(perm) for perm in itertools.combinations_with_replacement(OBJECTS, 100)]
-        # OBJECTS = [random.sample(PERMUTATIONS_COLORS, 1)[0] for _ in range(len(output_folder_paths))]
-        # OBJECTS = [random.choices(OBJECTS, k=2) for _ in range(len(output_folder_paths))]
-        # OBJECTS = [['B', 'B', 'R', 'B', 'R', 'R', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B'], ['B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'B', 'B'], ['R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'R'], ['R', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'B'], ['R', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'R'], ['R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'R'], ['B', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'R'], ['B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B'], ['B', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'B'], ['R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'B', 'B', 'B']]
+        # generated with other script
         OBJECTS = [['R', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'R'], ['R', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'R', 'R', 'B', 'R', 'B', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'R'], ['R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'R', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'B'], ['R', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'B'], ['B', 'B', 'R', 'B', 'R', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'R', 'R', 'R'], ['R', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'R'], ['R', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'B'], ['R', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'R', 'B', 'R', 'R', 'B'], ['R', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'R', 'B', 'B'], ['R', 'R', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'R', 'B', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'B', 'B', 'R', 'R', 'B', 'R', 'B', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'R', 'R', 'B', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'B', 'R', 'R', 'R', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'R']]
         LOCATIONS_REL = []
         for targets in OBJECTS:
             print(targets)
             locations = []
-            cur_point = (0, 0) #random.uniform(0.75, 1.5)
+            cur_point = (0, 0)
             cur_direction = 0 
             for target in targets:
                 cur_dist = random.uniform(1, 1.75) - 0.2
@@ -254,11 +207,7 @@ if __name__ == "__main__":
         for i, (obj, loc) in enumerate(zip(OBJECTS, LOCATIONS_REL)):
             total_list.append((obj, loc))
 
-    # assert len(total_list) == NUM_INITIALIZATIONS * 16 * 5, f"len(total_list): {len(total_list)}"
-    # print(len(total_list))
     joblib.Parallel(n_jobs=10)(joblib.delayed(run)(d, output_folder=output_folder_path, params_path=params_path, checkpoint_path=checkpoint_path, duration_sec=DEFAULT_DURATION_SEC, record_hz=record_hz, variable_timestep=variable_timestep) for d, params_path, checkpoint_path, output_folder_path, record_hz, variable_timestep in tqdm(zip(total_list, concurrent_params_paths, concurrent_checkpoint_paths, output_folder_paths, expanded_record_hzs, expanded_variable_timesteps)))
-    # for d, params_path, checkpoint_path, output_folder_path in zip(total_list, concurrent_params_paths, concurrent_checkpoint_paths, output_folder_paths):
-    #     run(d, normalize_path=normalize_path, output_folder=output_folder_path, params_path=params_path, checkpoint_path=checkpoint_path, duration_sec=DEFAULT_DURATION_SEC)
 
 
     video_filename = "rand.mp4"
@@ -305,7 +254,6 @@ if __name__ == "__main__":
                 # save success_array as csv
                 np.savetxt(os.path.join(default_output_folder, eval_dir, "success.csv"), success_array, delimiter=",", fmt="%d")
 
-                import subprocess
                 video_paths = [os.path.join(default_output_folder, eval_dir, absolute_path, "rand.mp4") for absolute_path in sorted(os.listdir(os.path.join(default_output_folder, eval_dir))) if os.path.isdir(os.path.join(default_output_folder, eval_dir, absolute_path)) and  "rand.mp4" in os.listdir(os.path.join(default_output_folder, eval_dir, absolute_path))]
                 combined_video_filename = "combined_video.mp4"
                 # concatenate all videos in video_paths

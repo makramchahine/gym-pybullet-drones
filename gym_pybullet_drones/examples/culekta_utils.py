@@ -1,27 +1,5 @@
-"""Script demonstrating the joint use of simulation and control.
 
-The simulation is run by a `CtrlAviary` or `VisionAviary` environment.
-The control is given by the PID implementation in `DSLPIDControl`.
-
-Example
--------
-In a terminal, run as:
-
-    $ python fly.py
-
-Notes
------
-The drones move, at different altitudes, along circular trajectories
-in the X-Y plane, around point (0, 0).
-
-"""
 import os
-import copy
-import time
-import argparse
-from datetime import datetime
-import pdb
-import math
 import random
 import numpy as np
 import pybullet as p
@@ -44,16 +22,14 @@ STABILIZE_LIFT_MULTIPLIER = 0.25
 IN_VIEW_THRESHOLD_RADIAN = 0.2 * np.pi
 IN_RANGE_THRESHOLD = 0.7
 
-task = "hike"
 drop = True
-if task == 'hike':
-    DEFAULT_CRITICAL_SPEED = 0.05 / 1.5  
-    DEFAULT_CRITICAL_YAW_SPEED = 0.2 * np.pi * 2/3
-    DEFAULT_SEARCHING_YAW = 0.10 * np.pi * 2/3
-    DEFAULT_LIFT_SPEED = 0.05
-    DEFAULT_DROP_POINT_DIST = 0.05
-    DROP_MAX_HEIGHT = 0.3
-    DROP_SPEED = 0.1
+DEFAULT_CRITICAL_SPEED = 0.05 / 1.5  
+DEFAULT_CRITICAL_YAW_SPEED = 0.2 * np.pi * 2/3
+DEFAULT_SEARCHING_YAW = 0.10 * np.pi * 2/3
+DEFAULT_LIFT_SPEED = 0.05
+DEFAULT_DROP_POINT_DIST = 0.05
+DROP_MAX_HEIGHT = 0.3
+DROP_SPEED = 0.1
 
 COLORS = ['R', 'G', 'B']
 PERMUTATIONS_COLORS = [list(perm) for perm in itertools.permutations(COLORS, 3)]
@@ -87,8 +63,6 @@ def setup_folders(sim_dir, num_drones):
             os.makedirs(sim_dir + f"/pics{d}/")
         if not os.path.exists(sim_dir + f"/pybullet_pics{d}"):
             os.makedirs(sim_dir + f"/pybullet_pics{d}/")
-        if not os.path.exists(sim_dir + f"/rgb_images"):
-            os.makedirs(sim_dir + f"/rgb_images/")
 
 def add_random_targets(target_colors, target_locations, LCR_obj_xy, LCR_obj_colors):
     sampled_order = random.sample(PERMUTATIONS_COLORS, 1)[0]
@@ -108,7 +82,6 @@ def step_with_distance_and_angle(INIT_THETA, FINAL_THETA, DELTA_THETA, TARGET_LO
         last_yaw = target_att[-1][2] # R, P, Y
         dist = np.sqrt((last_pos[0] - final_target[0]) ** 2 + (last_pos[1] - final_target[1]) ** 2)
         yaw_dist = signed_angular_distance(last_yaw, final_theta + Theta)
-        # print(f"yaw_dist: {yaw_dist}, delta_theta: {delta_theta}")
 
         if hold:
             speed = 0

@@ -5,32 +5,11 @@ import pybullet as p
 import matplotlib.pyplot as plt
 from scipy.stats import norm
 
-from gym_pybullet_drones.utils.enums import DroneModel, Physics, ImageType
-from gym_pybullet_drones.envs.CtrlAviary import CtrlAviary
-from gym_pybullet_drones.control.DSLPIDControl import DSLPIDControl
-from gym_pybullet_drones.control.SimplePIDControl import SimplePIDControl
+from gym_pybullet_drones.utils.enums import ImageType
 
 from culekta_utils import *
 from simulator_utils import *
 from simulator_base import BaseSimulator
-
-DEFAULT_DRONES = DroneModel("cf2x")
-DEFAULT_NUM_DRONES = 1
-DEFAULT_PHYSICS = Physics("pyb")
-DEFAULT_VISION = False
-DEFAULT_GUI = False
-DEFAULT_RECORD_VISION = False
-DEFAULT_PLOT = True
-DEFAULT_USER_DEBUG_GUI = False
-DEFAULT_AGGREGATE = True
-DEFAULT_OBSTACLES = True
-DEFAULT_SIMULATION_FREQ_HZ = 240
-DEFAULT_CONTROL_FREQ_HZ = 240
-# DEFAULT_RECORD_FREQ_HZ = 4
-DEFAULT_DURATION_SEC = 8
-DEFAULT_COLAB = False
-
-
 
 FINISH_COUNTER_THRESHOLD = 32
 RANDOM_WALK = True
@@ -39,6 +18,14 @@ CONTROL_STEP_NORMALIZATION = 3
 
 class TrainSimulator(BaseSimulator):
     def __init__(self, ordered_objs, ordered_rel_locs, sim_dir, start_H, target_Hs, Theta, Theta_offset, record_hz):
+        from copy import deepcopy
+        self.custom_obj_location = {
+            "colors": deepcopy(ordered_objs),
+            "locations": [convert_to_global(obj_loc_rel, Theta) for obj_loc_rel in ordered_rel_locs]
+        }
+        ordered_objs.pop(-1)
+        ordered_rel_locs.pop(-1)
+
         super().__init__(ordered_objs, ordered_rel_locs, sim_dir, start_H, target_Hs, Theta, Theta_offset, record_hz)
 
         self.num_frames = random.randint(TARGET_NUM_TIMESTEPS_TO_CRITICAL[0], TARGET_NUM_TIMESTEPS_TO_CRITICAL[1])
@@ -130,16 +117,16 @@ class TrainSimulator(BaseSimulator):
                     self.checkpoint_frame = len(target_pos)
                 speed = 0
                 yaw_speed = DEFAULT_SEARCHING_YAW * np.sign(yaw_dist) / self.control_freq_hz
-                if self.critical_action == 'R':
-                    yaw_speed += DEFAULT_CRITICAL_YAW_SPEED / self.control_freq_hz
-                elif self.critical_action == 'B':
-                    yaw_speed += -DEFAULT_CRITICAL_YAW_SPEED / self.control_freq_hz
-                elif self.critical_action == 'G':
-                    lift_speed = DEFAULT_LIFT_SPEED / self.control_freq_hz
-                    if not self.previously_reached_critical:
-                        self.FINAL_THETA[0] = angle_between_two_points(last_pos[:2], final_target[:2]) - self.Theta # continue to face target
-                else:
-                    assert False, f"critical_action: {self.critical_action}"
+                # if self.critical_action == 'R':
+                #     yaw_speed += DEFAULT_CRITICAL_YAW_SPEED / self.control_freq_hz
+                # elif self.critical_action == 'B':
+                #     yaw_speed += -DEFAULT_CRITICAL_YAW_SPEED / self.control_freq_hz
+                # elif self.critical_action == 'G':
+                #     lift_speed = DEFAULT_LIFT_SPEED / self.control_freq_hz
+                #     if not self.previously_reached_critical:
+                #         self.FINAL_THETA[0] = angle_between_two_points(last_pos[:2], final_target[:2]) - self.Theta # continue to face target
+                # else:
+                #     assert False, f"critical_action: {self.critical_action}"
                 new_theta = last_yaw + yaw_speed
 
 
@@ -283,7 +270,7 @@ class TrainSimulator(BaseSimulator):
 
     def run_simulation_to_completion(self):
         """ Creates training images with the stored trajectory """
-        self.setup_simulation()
+        self.setup_simulation(custom_obj_location=self.custom_obj_location)
 
         while not self.check_exausted_steps():
             state = self.step_simulation(self.record_freq_hz)
@@ -293,70 +280,3 @@ class TrainSimulator(BaseSimulator):
             if len(self.global_pos_array) > 1:
                 rel_disp = get_relative_displacement(self.global_pos_array[-1], self.global_pos_array[-2], -self.Theta)
                 self.timestepwise_displacement_array.append(rel_disp)
-
-    
-    def run_recon(self):
-        self.setup_simulation()
-
-        pos = np.array([[0., 0., self.start_H]])
-        rpy = np.array([[0., 0., self.Theta_offset]])
-
-        drone = DEFAULT_DRONES
-        custom_obj_location = {
-            "colors": self.ordered_objs,
-            "locations": self.obj_loc_global
-        }
-
-        os.makedirs(self.sim_dir + f"/recon_pics0", exist_ok=True)
-
-        from copy import deepcopy
-        initial = deepcopy(rpy)
-        # read timestepwise_displacement_array
-        timestepwise_displacement_array = np.loadtxt(self.sim_dir + "/timestepwise_displacement.csv", delimiter=",")
-        for i in range(len(timestepwise_displacement_array)):
-            # self.env.pos += np.array([timestepwise_displacement_array[i, 0], timestepwise_displacement_array[i, 1], timestepwise_displacement_array[i, 2]])
-            # self.env.rpy += np.array([0, 0, timestepwise_displacement_array[i, 3]])
-            pos += np.array([timestepwise_displacement_array[i, 0], timestepwise_displacement_array[i, 1], timestepwise_displacement_array[i, 2]])
-            rpy += np.array([0, 0, timestepwise_displacement_array[i, 3]])
-
-            self.env = CtrlAviary(drone_model=drone,
-                num_drones=self.num_drones,
-                initial_xyzs=pos,
-                initial_rpys=rpy,
-                physics=DEFAULT_PHYSICS,
-                neighbourhood_radius=10,
-                freq=self.simulation_freq_hz,
-                aggregate_phy_steps=self.AGGR_PHY_STEPS,
-                gui=DEFAULT_GUI,
-                record=DEFAULT_RECORD_VISION,
-                obstacles=DEFAULT_OBSTACLES,
-                user_debug_gui=DEFAULT_USER_DEBUG_GUI,
-                custom_obj_location=custom_obj_location
-                )
-            self.env.IMG_RES = np.array([256, 144])
-            PYB_CLIENT = self.env.getPyBulletClient()
-
-            if drone in [DroneModel.CF2X, DroneModel.CF2P]:
-                self.ctrl = [DSLPIDControl(drone_model=drone) for i in range(self.num_drones)]
-            elif drone in [DroneModel.HB]:
-                self.ctrl = [SimplePIDControl(drone_model=drone) for i in range(self.num_drones)]
-
-            rgb, dep, seg = self.env._getDroneImages(0)
-            self.env._exportImage(img_type=ImageType.RGB,
-                                    img_input=rgb,
-                                    path=self.sim_dir + f"/recon_pics0",
-                                    frame_num=int(i+1),
-                                    )
-            self.env.close()
-
-        print(f"init: {initial}")
-        print(f"fina: {rpy}")
-
-        # while not self.check_exausted_steps():
-        #     state = self.step_simulation(self.record_freq_hz)
-        #     self.global_pos_array.append(get_x_y_z_yaw_relative_to_base_env(state, self.Theta))
-        #     self.vel_array.append(get_vx_vy_vz_yawrate_rel_to_self(state))
-
-        #     if len(self.global_pos_array) > 1:
-        #         rel_disp = get_relative_displacement(self.global_pos_array[-1], self.global_pos_array[-2], -self.Theta)
-        #         self.timestepwise_displacement_array.append(rel_disp)
