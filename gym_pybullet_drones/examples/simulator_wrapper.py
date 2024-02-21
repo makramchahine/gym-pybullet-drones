@@ -1,52 +1,119 @@
 
 import os
 import random
-from functools import partial
 import joblib
 from tqdm import tqdm
 from datetime import datetime
 import numpy as np
+from schemas import InitConditionsSchema
+import json
 
-from gym_pybullet_drones.examples.simulator_base import BaseSimulator, DEFAULT_NUM_DRONES
+from gym_pybullet_drones.examples.simulator_base import DEFAULT_NUM_DRONES
 from gym_pybullet_drones.examples.simulator_train import TrainSimulator
 from culekta_utils import setup_folders
 
-def generate_init_conditions_and_save_to_folder(sim_dir):
+
+def generate_init_conditions_fly_and_turn(object_color) -> InitConditionsSchema:
+    """
+    Specific implementation with weighted probabilities
+
+    Task: Single Object -- Approach and Turn
+
+    """
+    max_yaw_offset = 0.175 * np.pi
     if random.random() < 0.75:
-        start_H = 0.1 + random.uniform(0, 1)
-        Theta_offset = random.choice([0.175 * np.pi, -0.175 * np.pi])
+        start_heights = [0.1 + random.uniform(0, 1)]
+        theta_offset = random.choice([max_yaw_offset, -max_yaw_offset])
     else:
-        start_H = 0.1 + random.choice([0, 1])
-        Theta_offset = random.uniform(0.175 * np.pi, -0.175 * np.pi)
-    target_Hs = [0.1 + 0.5]
-    Theta = random.random() * 2 * np.pi
-    rel_obj = [(random.uniform(1, 2), 0)]
+        start_heights = [0.1 + random.choice([0, 1])]
+        theta_offset = random.uniform(max_yaw_offset, -max_yaw_offset)
+
+    target_heights = [0.1 + 0.5]
+    theta_environment = random.random() * 2 * np.pi
+    objects_relative = [(random.uniform(1, 2), 0)]
     
+    init_conditions_schema = InitConditionsSchema()
+    init_conditions = {
+        "task_name": "fly_and_turn",
+        "start_heights": start_heights,
+        "target_heights": target_heights,
+        "start_dist": objects_relative[0][0],
+        "theta_offset": theta_offset,
+        "theta_environment": theta_environment,
+        "objects_relative": objects_relative,
+        "objects_color": [object_color]
+    }
+    init_conditions = init_conditions_schema.load(init_conditions)
 
-    with open(os.path.join(sim_dir, 'theta.txt'), 'w') as f:
-        f.write(str(Theta_offset))
-    with open(os.path.join(sim_dir, 'start_h.txt'), 'w') as f:
-        f.write(str(start_H))
-    with open(os.path.join(sim_dir, 'start_dist.txt'), 'w') as f:
-        f.write(str(rel_obj[0][0]))
+    return init_conditions
 
-    return start_H, target_Hs, Theta, Theta_offset, rel_obj
+def generate_init_conditions_2choice(object_color) -> InitConditionsSchema:
+    """
+    Specific implementation with weighted probabilities
 
-def generate_one_dynamic_training_trajectory(output_folder, obj_color, record_hz):
+    Task: Single Object -- Fly to Correct Choice
+
+    """
+    max_yaw_offset = 0.1 * np.pi
+    if random.random() < 0.75:
+        start_heights = [0.1 + random.uniform(0, 1)]
+        theta_offset = random.choice([max_yaw_offset, -max_yaw_offset])
+    else:
+        start_heights = [0.1 + random.choice([0, 1])]
+        theta_offset = random.uniform(max_yaw_offset, -max_yaw_offset)
+
+    target_heights = [0.1 + 0.5]
+    theta_environment = random.random() * 2 * np.pi
+    
+    start_dist = random.uniform(1, 2)
+    orthogonal_dist = 0.2
+    if random.random() < 0.5:
+        correct_side = "R"
+        objects_relative = [(start_dist, -orthogonal_dist), (start_dist, orthogonal_dist)]
+    else:
+        correct_side = "L"
+        objects_relative = [(start_dist, orthogonal_dist), (start_dist, -orthogonal_dist)]
+    
+    objects_color = [object_color, "B" if object_color == "R" else "R"]
+    objects_color_target = [object_color]
+    objects_relative_target = objects_relative[0:1]
+    
+    init_conditions_schema = InitConditionsSchema()
+    init_conditions = {
+        "task_name": "2choice",
+        "start_heights": start_heights,
+        "target_heights": target_heights,
+        "start_dist": objects_relative[0][0],
+        "theta_offset": theta_offset,
+        "theta_environment": theta_environment,
+        "objects_relative": objects_relative,
+        "objects_color": objects_color,
+        "objects_relative_target": objects_relative_target,
+        "objects_color_target": objects_color_target,
+        "correct_side": correct_side
+    }
+    init_conditions = init_conditions_schema.load(init_conditions)
+
+    return init_conditions
+
+function_map = {
+    "fly_and_turn": generate_init_conditions_fly_and_turn,
+    "2choice": generate_init_conditions_2choice
+}
+
+def generate_one_training_trajectory(output_folder, obj_color, record_hz, task_tag: str):
     sim_name = "save-flight-" + datetime.now().strftime("%m.%d.%Y_%H.%M.%S.%f") # include milliseconds in save name for parallel runs
     sim_dir = os.path.join(output_folder, sim_name)
     setup_folders(sim_dir, DEFAULT_NUM_DRONES)
-    
-    start_H, target_Hs, Theta, Theta_offset, rel_obj = generate_init_conditions_and_save_to_folder(sim_dir)
 
-    with open(os.path.join(sim_dir, 'colors.txt'), 'w') as f:
-        f.write(str("".join(obj_color)))
+    generate_init_conditions_func = function_map[task_tag]
+    init_conditions = generate_init_conditions_func(obj_color)
+    with open(os.path.join(sim_dir, 'init_conditions.json'), 'w') as f:
+        json.dump(init_conditions, f)
 
-    sim = TrainSimulator(obj_color, rel_obj, sim_dir, start_H, target_Hs, Theta, Theta_offset, record_hz)
+    sim = TrainSimulator(sim_dir, init_conditions, record_hz, task_tag)
     
     sim.precompute_trajectory()
-
-    print("Running simulation")
     sim.run_simulation_to_completion()
 
     sim.export_plots()
@@ -54,22 +121,15 @@ def generate_one_dynamic_training_trajectory(output_folder, obj_color, record_hz
 
 
 if __name__ == "__main__":
-    samples = 10
+    samples = 6
     record_hz = 3 # ints or "1-10"
-    output_folder = f'train_d6_ss2_{samples}_3hzf_bm_px_td_nlsp_gn_nt_testing'
+    # output_folder = f'train_d6_ss2_{samples}_3hzf_bm_px_td_nlsp_gn_nt_testing_clean'
+    output_folder = f'train_blip_{samples}'
+    task_tag = "2choice"
     
     OBJECTS = ["R", "B"]
-    TOTAL_OBJECTS = OBJECTS
     NUM_INITIALIZATIONS = samples // len(OBJECTS)
-    TOTAL_OBJECTS = OBJECTS * NUM_INITIALIZATIONS
-
-
-    total_list = []
-    for i, obj in enumerate(zip(TOTAL_OBJECTS)):
-        total_list.append(obj)
-    assert len(total_list) == NUM_INITIALIZATIONS * (len(OBJECTS)), f"len(total_list): {len(total_list)}"
+    total_list = OBJECTS * NUM_INITIALIZATIONS
     random.shuffle(total_list)
 
-    futures = []
-    returns = []
-    joblib.Parallel(n_jobs=16)(joblib.delayed(generate_one_dynamic_training_trajectory)(output_folder, d, record_hz) for d in tqdm(total_list))
+    joblib.Parallel(n_jobs=16)(joblib.delayed(generate_one_training_trajectory)(output_folder, d, record_hz, task_tag) for d in tqdm(total_list))

@@ -39,6 +39,8 @@ def generate_init_conditions_and_save_to_folder(sim_dir):
         f.write(str(start_H))
     with open(os.path.join(sim_dir, 'start_dist.txt'), 'w') as f:
         f.write(str(rel_obj[0][0]))
+    with open(os.path.join(sim_dir, 'rand_theta.txt'), 'w') as f:
+        f.write(str(Theta))
 
     return start_H, target_Hs, Theta, Theta_offset, rel_obj
 
@@ -51,7 +53,6 @@ def generate_one_dynamic_training_trajectory(output_folder, obj_color, record_hz
 
     with open(os.path.join(sim_dir, 'colors.txt'), 'w') as f:
         f.write(str("".join(obj_color)))
-
 
     if obj_color[0] == "R":
         obj_color = ["R", "B"]
@@ -72,7 +73,7 @@ def generate_one_dynamic_training_trajectory(output_folder, obj_color, record_hz
 
 
 if __name__ == "__main__":
-    samples = 10
+    samples = 6
     record_hz = 3 # ints or "1-10"
     output_folder = f'train_blip_{samples}'
     

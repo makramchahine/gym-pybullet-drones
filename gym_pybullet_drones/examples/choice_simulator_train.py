@@ -30,7 +30,7 @@ class TrainSimulator(BaseSimulator):
 
         self.num_frames = random.randint(TARGET_NUM_TIMESTEPS_TO_CRITICAL[0], TARGET_NUM_TIMESTEPS_TO_CRITICAL[1])
 
-        self.dist_0_x = self.ordered_rel_locs[0][0]
+        self.dist_0_x = self.objects_relative[0][0]
         self.dist_0_yaw = 0 - Theta_offset
         self.dist_0_z = start_H - self.INIT_XYZS[0, 2]
 
@@ -77,7 +77,7 @@ class TrainSimulator(BaseSimulator):
             self.TARGET_POS, self.TARGET_ATT, self.FINAL_THETA, self.reached_critical
         """
         speeds = []
-        for i, (target_pos, target_att, init_theta, final_theta, delta_theta, final_target, height) in enumerate(zip(self.TARGET_POS, self.TARGET_ATT, self.INIT_THETA, self.FINAL_THETA, self.DELTA_THETA, self.TARGET_LOCATIONS, self.TARGET_HS)):
+        for i, (target_pos, target_att, init_theta, final_theta, delta_theta, final_target, height) in enumerate(zip(self.TARGET_POS, self.TARGET_ATT, self.INIT_THETA, self.FINAL_THETA, self.DELTA_THETA, self.TARGET_LOCATIONS, self.target_heights)):
             last_pos = target_pos[-1]    # X, Y, Z
             last_yaw = target_att[-1][2] # R, P, Y
             last_height = target_pos[-1][2]
@@ -148,7 +148,7 @@ class TrainSimulator(BaseSimulator):
         return speeds
 
     def check_completed_all_goals(self):
-        return self.target_index >= len(self.ordered_objs)
+        return self.target_index >= len(self.objects_color)
     
     def check_completed_single_goal(self):
         return self.finish_counter >= FINISH_COUNTER_THRESHOLD * 30
@@ -166,7 +166,7 @@ class TrainSimulator(BaseSimulator):
             return False
         
         if self.reached_critical or self.previously_reached_critical:
-            self.finish_counter += 1 if not self.ordered_objs[self.target_index] == "G" else 0.34
+            self.finish_counter += 1 if not self.objects_color[self.target_index] == "G" else 0.34
             self.previously_reached_critical = True
 
         if self.check_completed_single_goal():

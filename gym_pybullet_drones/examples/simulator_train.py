@@ -4,8 +4,9 @@ import numpy as np
 import pybullet as p
 import matplotlib.pyplot as plt
 from scipy.stats import norm
+from copy import deepcopy
 
-from gym_pybullet_drones.utils.enums import DroneModel, Physics, ImageType
+from gym_pybullet_drones.utils.enums import DroneModel, ImageType
 from gym_pybullet_drones.envs.CtrlAviary import CtrlAviary
 from gym_pybullet_drones.control.DSLPIDControl import DSLPIDControl
 from gym_pybullet_drones.control.SimplePIDControl import SimplePIDControl
@@ -13,24 +14,7 @@ from gym_pybullet_drones.control.SimplePIDControl import SimplePIDControl
 from culekta_utils import *
 from simulator_utils import *
 from simulator_base import BaseSimulator
-
-DEFAULT_DRONES = DroneModel("cf2x")
-DEFAULT_NUM_DRONES = 1
-DEFAULT_PHYSICS = Physics("pyb")
-DEFAULT_VISION = False
-DEFAULT_GUI = False
-DEFAULT_RECORD_VISION = False
-DEFAULT_PLOT = True
-DEFAULT_USER_DEBUG_GUI = False
-DEFAULT_AGGREGATE = True
-DEFAULT_OBSTACLES = True
-DEFAULT_SIMULATION_FREQ_HZ = 240
-DEFAULT_CONTROL_FREQ_HZ = 240
-# DEFAULT_RECORD_FREQ_HZ = 4
-DEFAULT_DURATION_SEC = 8
-DEFAULT_COLAB = False
-
-
+from default_pyb_settings import *
 
 FINISH_COUNTER_THRESHOLD = 32
 RANDOM_WALK = True
@@ -38,14 +22,14 @@ TARGET_NUM_TIMESTEPS_TO_CRITICAL = (55, 90) # this affects the rate of drone con
 CONTROL_STEP_NORMALIZATION = 3
 
 class TrainSimulator(BaseSimulator):
-    def __init__(self, ordered_objs, ordered_rel_locs, sim_dir, start_H, target_Hs, Theta, Theta_offset, record_hz):
-        super().__init__(ordered_objs, ordered_rel_locs, sim_dir, start_H, target_Hs, Theta, Theta_offset, record_hz)
-
+    def __init__(self, sim_dir, init_conditions, record_hz, task_tag):
+        super().__init__(sim_dir, init_conditions, record_hz, task_tag)
+        self.turn_mode = True if task_tag == "fly_and_turn" else False
         self.num_frames = random.randint(TARGET_NUM_TIMESTEPS_TO_CRITICAL[0], TARGET_NUM_TIMESTEPS_TO_CRITICAL[1])
 
-        self.dist_0_x = self.ordered_rel_locs[0][0]
-        self.dist_0_yaw = 0 - Theta_offset
-        self.dist_0_z = start_H - self.INIT_XYZS[0, 2]
+        self.dist_0_x = self.start_dist
+        self.dist_0_yaw = 0 - self.theta_offset
+        self.dist_0_z = self.start_height - self.INIT_XYZS[0, 2]
 
         num_control_steps = self.num_frames / CONTROL_STEP_NORMALIZATION * self.control_freq_hz
         self.eta_x_per_control = (self.dist_0_x - 0.5) / num_control_steps
@@ -57,8 +41,8 @@ class TrainSimulator(BaseSimulator):
         self.P_X = 0.18 #random.uniform(0.18, 0.2)
         self.P_YAW = 0.2 #0.1 for 1 dist
         self.P_Z = 0.2
+        
         self.custom_timesteps = []
-
         self.checkpoint_frame = -1
     
     def get_adj_yaw_speed(self, yaw_dist):
@@ -84,73 +68,73 @@ class TrainSimulator(BaseSimulator):
         for i in range(self.simulation_freq_hz):
             self._step_trajectory(hold=True)
 
+    def _compute_turn_effects(self, last_pos, final_target, yaw_speed, lift_speed):
+        if self.critical_action == 'R':
+            yaw_speed += DEFAULT_CRITICAL_YAW_SPEED / self.control_freq_hz
+        elif self.critical_action == 'B':
+            yaw_speed += -DEFAULT_CRITICAL_YAW_SPEED / self.control_freq_hz
+        elif self.critical_action == 'G':
+            lift_speed = DEFAULT_LIFT_SPEED / self.control_freq_hz
+            if not self.previously_reached_critical:
+                self.FINAL_THETA[0] = angle_between_two_points(last_pos[:2], final_target[:2]) - self.theta_environment # continue to face target
+        else:
+            assert False, f"critical_action: {self.critical_action}"
+
+        return yaw_speed, lift_speed
+
+    def _get_adj_speeds(self, dist, yaw_dist, height_dist):
+        speed = self.get_adj_x_speed(dist)
+        yaw_speed = self.get_adj_yaw_speed(yaw_dist)
+        lift_speed = self.get_adj_z_speed(height_dist)
+        return speed, yaw_speed, lift_speed
+
     def _step_trajectory(self, hold=False):
         """
         Modifies:
             self.TARGET_POS, self.TARGET_ATT, self.FINAL_THETA, self.reached_critical
         """
         speeds = []
-        for i, (target_pos, target_att, init_theta, final_theta, delta_theta, final_target, height) in enumerate(zip(self.TARGET_POS, self.TARGET_ATT, self.INIT_THETA, self.FINAL_THETA, self.DELTA_THETA, self.TARGET_LOCATIONS, self.TARGET_HS)):
+        print(f"self.objects_absolute_target: {self.objects_absolute_target}")
+        for i, (target_pos, target_att, init_theta, final_theta, final_target) in enumerate(zip(self.TARGET_POS, self.TARGET_ATT, self.INIT_THETA, self.FINAL_THETA, self.objects_absolute_target)):
             last_pos = target_pos[-1]    # X, Y, Z
             last_yaw = target_att[-1][2] # R, P, Y
             last_height = target_pos[-1][2]
             dist = distance_to_target(last_pos, final_target)
-            yaw_dist = signed_angular_distance(last_yaw, final_theta + self.Theta)
-            height_dist = height - last_height
+            yaw_dist = signed_angular_distance(last_yaw, final_theta + self.theta_environment)
+            height_dist = self.target_height - last_height
 
             dist_to_crit = dist - 0.49
 
             lift_speed = 0
             if hold:
-                speed = 0
-                yaw_speed = 0
                 new_theta = init_theta
-                lift_speed = 0
+                speed, yaw_speed, lift_speed = (0, 0, 0)
             elif dist > self.critical_dist + self.critical_dist_buffer and not self.previously_reached_critical:
-                speed = self.get_adj_x_speed(dist_to_crit)
-                yaw_speed = self.get_adj_yaw_speed(yaw_dist)
-                lift_speed = self.get_adj_z_speed(height_dist)
-
-                if abs(yaw_dist) < APPROX_CORRECT_YAW:
-                    new_theta = final_theta + self.Theta
-                else:
-                    new_theta = last_yaw + yaw_speed
-                self.FINAL_THETA[0] = angle_between_two_points(last_pos[:2], final_target[:2]) - self.Theta
+                speed, yaw_speed, lift_speed = self._get_adj_speeds(dist_to_crit, yaw_dist, height_dist)
+                new_theta = final_theta + self.theta_environment if abs(yaw_dist) < APPROX_CORRECT_YAW else last_yaw + yaw_speed
+                
+                self.FINAL_THETA[0] = angle_between_two_points(last_pos[:2], final_target[:2]) - self.theta_environment
             elif dist > self.critical_dist and not self.previously_reached_critical:
-                speed = self.get_adj_x_speed(dist_to_crit)
-                yaw_speed = self.get_adj_yaw_speed(yaw_dist)
-                lift_speed = self.get_adj_z_speed(height_dist)
-
-                if abs(yaw_dist) < APPROX_CORRECT_YAW:
-                    new_theta = final_theta + self.Theta
-                else:
-                    new_theta = last_yaw + yaw_speed
+                speed, yaw_speed, lift_speed = self._get_adj_speeds(dist_to_crit, yaw_dist, height_dist)
+                new_theta = final_theta + self.theta_environment if abs(yaw_dist) < APPROX_CORRECT_YAW else last_yaw + yaw_speed
             else:
                 if self.checkpoint_frame == -1:
                     self.checkpoint_frame = len(target_pos)
                 speed = 0
                 yaw_speed = DEFAULT_SEARCHING_YAW * np.sign(yaw_dist) / self.control_freq_hz
-                if self.critical_action == 'R':
-                    yaw_speed += DEFAULT_CRITICAL_YAW_SPEED / self.control_freq_hz
-                elif self.critical_action == 'B':
-                    yaw_speed += -DEFAULT_CRITICAL_YAW_SPEED / self.control_freq_hz
-                elif self.critical_action == 'G':
-                    lift_speed = DEFAULT_LIFT_SPEED / self.control_freq_hz
-                    if not self.previously_reached_critical:
-                        self.FINAL_THETA[0] = angle_between_two_points(last_pos[:2], final_target[:2]) - self.Theta # continue to face target
-                else:
-                    assert False, f"critical_action: {self.critical_action}"
+                if self.turn_mode:
+                    yaw_speed, lift_speed = self._compute_turn_effects(last_pos, final_target, yaw_speed, lift_speed)
                 new_theta = last_yaw + yaw_speed
 
 
             if self.critical_action == 'G':
                 delta_z = lift_speed if not self.previously_reached_critical else -DROP_SPEED / self.control_freq_hz * (last_height / DROP_MAX_HEIGHT)
                 self.reached_critical = dist < DEFAULT_DROP_POINT_DIST
-                new_height = max(last_height + delta_z, height)
+                new_height = max(last_height + delta_z, self.target_height)
             else:
                 delta_z = lift_speed
                 self.reached_critical = dist < self.critical_dist
-                new_height = (last_height + delta_z) if (lift_speed != 0 or hold) else height
+                new_height = (last_height + delta_z) if (lift_speed != 0 or hold) else self.target_height
         
             delta_pos = convert_to_global([speed, 0], new_theta)
             target_pos.append([last_pos[0] + delta_pos[0], last_pos[1] + delta_pos[1], new_height])
@@ -161,7 +145,7 @@ class TrainSimulator(BaseSimulator):
         return speeds
 
     def check_completed_all_goals(self):
-        return self.target_index >= len(self.ordered_objs)
+        return self.target_index >= len(self.objects_color_target)
     
     def check_completed_single_goal(self):
         return self.finish_counter >= FINISH_COUNTER_THRESHOLD * 30
@@ -179,7 +163,7 @@ class TrainSimulator(BaseSimulator):
             return False
         
         if self.reached_critical or self.previously_reached_critical:
-            self.finish_counter += 1 if not self.ordered_objs[self.target_index] == "G" else 0.34
+            self.finish_counter += 1 if not self.objects_color_target[self.target_index] == "G" else 0.34
             self.previously_reached_critical = True
 
         if self.check_completed_single_goal():
@@ -287,38 +271,34 @@ class TrainSimulator(BaseSimulator):
 
         while not self.check_exausted_steps():
             state = self.step_simulation(self.record_freq_hz)
-            self.global_pos_array.append(get_x_y_z_yaw_relative_to_base_env(state, self.Theta))
+            self.global_pos_array.append(get_x_y_z_yaw_relative_to_base_env(state, self.theta_environment))
             self.vel_array.append(get_vx_vy_vz_yawrate_rel_to_self(state))
 
             if len(self.global_pos_array) > 1:
-                rel_disp = get_relative_displacement(self.global_pos_array[-1], self.global_pos_array[-2], -self.Theta)
+                rel_disp = get_relative_displacement(self.global_pos_array[-1], self.global_pos_array[-2], -self.theta_environment)
                 self.timestepwise_displacement_array.append(rel_disp)
 
     
     def run_recon(self):
         self.setup_simulation()
-
-        pos = np.array([[0., 0., self.start_H]])
-        rpy = np.array([[0., 0., self.Theta_offset]])
-
-        drone = DEFAULT_DRONES
         custom_obj_location = {
-            "colors": self.ordered_objs,
-            "locations": self.obj_loc_global
+            "colors": self.objects_color,
+            "locations": self.objects_absolute
         }
-
+        
+        positions = np.loadtxt(self.sim_dir + "/sim_pos.csv", delimiter=",")
         os.makedirs(self.sim_dir + f"/recon_pics0", exist_ok=True)
 
-        from copy import deepcopy
-        initial = deepcopy(rpy)
-        # read timestepwise_displacement_array
-        timestepwise_displacement_array = np.loadtxt(self.sim_dir + "/timestepwise_displacement.csv", delimiter=",")
-        for i in range(len(timestepwise_displacement_array)):
-            # self.env.pos += np.array([timestepwise_displacement_array[i, 0], timestepwise_displacement_array[i, 1], timestepwise_displacement_array[i, 2]])
-            # self.env.rpy += np.array([0, 0, timestepwise_displacement_array[i, 3]])
-            pos += np.array([timestepwise_displacement_array[i, 0], timestepwise_displacement_array[i, 1], timestepwise_displacement_array[i, 2]])
-            rpy += np.array([0, 0, timestepwise_displacement_array[i, 3]])
+        def get_absolute_position(state, Theta):
+            relative_state = convert_to_global([state[0], state[1]], Theta)
+            return np.array([relative_state[0], relative_state[1], state[2], state[3]])
+        
+        for i in range(len(positions)):
+            absolute_position = get_absolute_position(positions[i], self.theta_environment)
+            pos = absolute_position[:3].reshape(1, 3)
+            rpy = np.array([[0, 0, absolute_position[3]]])
 
+            drone = DEFAULT_DRONES
             self.env = CtrlAviary(drone_model=drone,
                 num_drones=self.num_drones,
                 initial_xyzs=pos,
@@ -348,15 +328,3 @@ class TrainSimulator(BaseSimulator):
                                     frame_num=int(i+1),
                                     )
             self.env.close()
-
-        print(f"init: {initial}")
-        print(f"fina: {rpy}")
-
-        # while not self.check_exausted_steps():
-        #     state = self.step_simulation(self.record_freq_hz)
-        #     self.global_pos_array.append(get_x_y_z_yaw_relative_to_base_env(state, self.Theta))
-        #     self.vel_array.append(get_vx_vy_vz_yawrate_rel_to_self(state))
-
-        #     if len(self.global_pos_array) > 1:
-        #         rel_disp = get_relative_displacement(self.global_pos_array[-1], self.global_pos_array[-2], -self.Theta)
-        #         self.timestepwise_displacement_array.append(rel_disp)
