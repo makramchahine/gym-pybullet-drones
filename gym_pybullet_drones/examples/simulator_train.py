@@ -23,7 +23,7 @@ CONTROL_STEP_NORMALIZATION = 3
 
 class TrainSimulator(BaseSimulator):
     def __init__(self, sim_dir, init_conditions, record_hz, task_tag):
-        super().__init__(sim_dir, init_conditions, record_hz, task_tag)
+        super().__init__(sim_dir, init_conditions, record_hz)
         self.turn_mode = True if task_tag == "fly_and_turn" else False
         self.num_frames = random.randint(TARGET_NUM_TIMESTEPS_TO_CRITICAL[0], TARGET_NUM_TIMESTEPS_TO_CRITICAL[1])
 

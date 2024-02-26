@@ -16,16 +16,16 @@
       <geometry>
 				<mesh filename="sphere_smooth.obj" scale="0.5 0.5 0.5"/>      
       </geometry>
-      <material name="blue">
-        <color rgba="0.2 0.2 1 1"/>
+      <material name="green">
+        <color rgba="0.2 1 0.2 1"/>
         <specular rgb="1 1 1"/>
       </material>
     </visual>
-    <!-- <collision>
+    <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
 	 <sphere radius="0.5"/>
       </geometry>
-    </collision> -->
+    </collision>
   </link>
 </robot>

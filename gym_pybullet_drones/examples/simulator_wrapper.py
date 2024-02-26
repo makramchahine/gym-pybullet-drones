@@ -5,9 +5,10 @@ import joblib
 from tqdm import tqdm
 from datetime import datetime
 import numpy as np
-from schemas import InitConditionsSchema
 import json
+import argparse
 
+from schemas import InitConditionsSchema
 from gym_pybullet_drones.examples.simulator_base import DEFAULT_NUM_DRONES
 from gym_pybullet_drones.examples.simulator_train import TrainSimulator
 from culekta_utils import setup_folders
@@ -41,7 +42,9 @@ def generate_init_conditions_fly_and_turn(object_color) -> InitConditionsSchema:
         "theta_offset": theta_offset,
         "theta_environment": theta_environment,
         "objects_relative": objects_relative,
-        "objects_color": [object_color]
+        "objects_color": [object_color],
+        "objects_relative_target": objects_relative,
+        "objects_color_target": [object_color],
     }
     init_conditions = init_conditions_schema.load(init_conditions)
 
@@ -121,15 +124,21 @@ def generate_one_training_trajectory(output_folder, obj_color, record_hz, task_t
 
 
 if __name__ == "__main__":
-    samples = 6
-    record_hz = 3 # ints or "1-10"
-    # output_folder = f'train_d6_ss2_{samples}_3hzf_bm_px_td_nlsp_gn_nt_testing_clean'
-    output_folder = f'train_blip_{samples}'
-    task_tag = "2choice"
+    parser = argparse.ArgumentParser(description='Provide base directory.')
+    parser.add_argument('--base_dir', type=str, default="./generated_paths/train_fly_and_turn", help='Base directory for the script')
+    parser.add_argument("--samples", type=int, default=10, help="Number of samples")
+    parser.add_argument("--record_hz", type=str, default=3, help="Recording frequency")
+    parser.add_argument("--task_tag", type=str, choices=["2choice", "fly_and_turn"], default="fly_and_turn", help="Task tag")
+    args = parser.parse_args()
+    
+    base_dir = args.base_dir
+    samples = args.samples
+    record_hz = args.record_hz # ints or "1-10"
+    task_tag = args.task_tag
     
     OBJECTS = ["R", "B"]
     NUM_INITIALIZATIONS = samples // len(OBJECTS)
     total_list = OBJECTS * NUM_INITIALIZATIONS
     random.shuffle(total_list)
 
-    joblib.Parallel(n_jobs=16)(joblib.delayed(generate_one_training_trajectory)(output_folder, d, record_hz, task_tag) for d in tqdm(total_list))
+    joblib.Parallel(n_jobs=16)(joblib.delayed(generate_one_training_trajectory)(base_dir, d, record_hz, task_tag) for d in tqdm(total_list))

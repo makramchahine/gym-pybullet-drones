@@ -8,16 +8,18 @@ from gym_pybullet_drones.utils.enums import ImageType
 
 from culekta_utils import *
 from simulator_utils import *
-from simulator import BaseSimulator
+from gym_pybullet_drones.examples.simulator_base import BaseSimulator
+
+from gym_pybullet_drones.examples.schemas import InitConditionsSchema
 
 FINISH_COUNTER_THRESHOLD = 1.5 # in seconds
 
 class EvalSimulator(BaseSimulator):
-    def __init__(self, ordered_objs, ordered_rel_locs, sim_dir, start_H, target_Hs, Theta, Theta_offset, record_hz):
-        super().__init__(ordered_objs, ordered_rel_locs, sim_dir, start_H, target_Hs, Theta, Theta_offset, record_hz)
+    def __init__(self, sim_dir: str, init_conditions: InitConditionsSchema, record_hz: str):
+        super().__init__(sim_dir, init_conditions, record_hz)
 
     def check_completed_all_goals(self):
-        return self.target_index >= len(self.ordered_objs)
+        return self.target_index >= len(self.objects_relative_target)
     
     def check_completed_single_goal(self):
         return self.finish_counter >= FINISH_COUNTER_THRESHOLD * self.record_freq_hz
@@ -51,13 +53,13 @@ class EvalSimulator(BaseSimulator):
 
                 self.vel_cmd_world = convert_vel_cmd_to_world_frame(vel_cmd, yaw)
                 
-                self.global_pos_array.append(get_x_y_z_yaw_relative_to_base_env(state, self.Theta))
+                self.global_pos_array.append(get_x_y_z_yaw_relative_to_base_env(state, self.theta_environment))
                 # self.global_pos_array.append(self.get_x_y_z_yaw_global(state))
 
                 self.vel_array.append(get_vx_vy_vz_yawrate_rel_to_self(state))
                 if len(self.global_pos_array) > 1:
                     # self.timestepwise_displacement_array.append(self.global_pos_array[-1] - self.global_pos_array[-2])
-                    self.timestepwise_displacement_array.append(get_relative_displacement(self.global_pos_array[-1], self.global_pos_array[-2], -self.Theta))
+                    self.timestepwise_displacement_array.append(get_relative_displacement(self.global_pos_array[-1], self.global_pos_array[-2], -self.theta_environment))
                 
                 updated_action = True
                 updated_state = state.copy()
@@ -82,35 +84,36 @@ class EvalSimulator(BaseSimulator):
 
     def safe_update_target_index(self):
         self.target_index += 1
-        if self.target_index >= len(self.ordered_objs):
-            self.target_index = len(self.ordered_objs) - 1
+        if self.target_index >= len(self.objects_relative_target):
+            self.target_index = len(self.objects_relative_target) - 1
 
+    # TODO: Fix automated evaluation
     def evaluate_completed_single_task(self, state):
         # extract positions
         x, y, z = state[0], state[1], state[2]
         yaw = state[9]
-        # print(f"{self.target_index} {self.finish_counter} {object_in_view(x, y, yaw, self.obj_loc_global[self.target_index])} get_relative_angle_to_target(x, y, yaw, xy_target): {get_relative_angle_to_target(x, y, yaw, self.obj_loc_global[self.target_index])}")
 
-        if object_in_view(x, y, yaw, self.obj_loc_global[self.target_index]):
+        print(f"\nTarget: {self.objects_relative_target[self.target_index]}")
+        if object_in_view(x, y, yaw, self.objects_relative_target[self.target_index]):
             self.alive_obj_previously_in_view = True
             return
 
-        if not object_in_view(x, y, yaw, self.obj_loc_global[self.target_index]) and self.alive_obj_previously_in_view:
+        if not object_in_view(x, y, yaw, self.objects_relative_target[self.target_index]) and self.alive_obj_previously_in_view:
             # Correct turn
-            if (self.ordered_objs[self.target_index] == 'R' and drone_turned_left(x, y, yaw, self.obj_loc_global[self.target_index]) or (self.ordered_objs[self.target_index] == 'B' and drone_turned_right(x, y, yaw, self.obj_loc_global[self.target_index]))):
+            if (self.objects_relative_target[self.target_index] == 'R' and drone_turned_left(x, y, yaw, self.objects_relative_target[self.target_index]) or (self.objects_relative_target[self.target_index] == 'B' and drone_turned_right(x, y, yaw, self.objects_relative_target[self.target_index]))):
                 print(f"Correct turn for {self.target_index}")
                 # Remove ball then add next object
                 # if self.vanish_mode:
                 #     self.env.removeObject(self.alive_obj_id)
                 #     print(f"Removed Item: {self.alive_obj_id}")
                 #     if not (self.target_index > len(self.ordered_objs) - 1):
-                #         self.alive_obj_id = self.env.addObject(self.ordered_objs[self.target_index], self.obj_loc_global[self.target_index])
+                #         self.alive_obj_id = self.env.addObject(self.ordered_objs[self.target_index], self.objects_relative_target[self.target_index])
                 #         print(f"New Item: {self.alive_obj_id}")
 
-                self.window_outcomes.append(self.ordered_objs[self.target_index])
+                self.window_outcomes.append(self.objects_relative_target[self.target_index])
                 # self.target_index += 1
                 self.safe_update_target_index()
-            elif self.ordered_objs[self.target_index] == 'R' or self.ordered_objs[self.target_index] == 'B':
+            elif self.objects_relative_target[self.target_index] == 'R' or self.objects_relative_target[self.target_index] == 'B':
                 self.window_outcomes.append("N")
                 # self.target_index += 1
                 self.safe_update_target_index()
@@ -121,12 +124,12 @@ class EvalSimulator(BaseSimulator):
 
         try:
             with open(os.path.join(self.sim_dir, 'finish.txt'), 'w') as f:
-                max_len = max(len(self.window_outcomes), len(self.ordered_objs))
+                max_len = max(len(self.window_outcomes), len(self.objects_relative_target))
                 # pad self.window_outcomes, self.ordered_objs with X's if they are too short
                 self.window_outcomes = self.window_outcomes + ['X'] * (max_len - len(self.window_outcomes))
-                self.ordered_objs = self.ordered_objs + ['X'] * (max_len - len(self.ordered_objs))
+                self.objects_relative_target = self.objects_relative_target + ['X'] * (max_len - len(self.objects_relative_target))
 
-                for window_outcome, color in zip(self.window_outcomes, self.ordered_objs):
+                for window_outcome, color in zip(self.window_outcomes, self.objects_relative_target):
                     f.write(f"{window_outcome},{color}\n")
         except Exception as e:
             print(e)

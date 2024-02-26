@@ -16,14 +16,14 @@ from gym_pybullet_drones.examples.schemas import InitConditionsSchema
 
 from culekta_utils import *
 from simulator_utils import *
-from default_pyb_settings import *
+from gym_pybullet_drones.examples.default_pyb_settings import *
 aligned_follower = True
 
 CRITICAL_DIST = 0.5
 CRITICAL_DIST_BUFFER = 0.1
 
 class BaseSimulator():
-    def __init__(self, sim_dir: str, init_conditions: InitConditionsSchema, record_hz: str, task_tag: str):
+    def __init__(self, sim_dir: str, init_conditions: InitConditionsSchema, record_hz: str):
         self.num_drones = DEFAULT_NUM_DRONES
         self.sim_dir = sim_dir
         self.simulation_freq_hz = DEFAULT_SIMULATION_FREQ_HZ
@@ -38,8 +38,8 @@ class BaseSimulator():
         self.objects_relative = init_conditions["objects_relative"]
         self.objects_relative_target = init_conditions.get("objects_relative_target", init_conditions["objects_relative"])
         
-        self.objects_absolute = [convert_to_global(obj_loc_rel, self.theta_environment) for obj_loc_rel in init_conditions["objects_relative"]]
-        self.objects_absolute_target = [convert_to_global(obj_loc_rel, self.theta_environment) for obj_loc_rel in init_conditions["objects_relative_target"]]
+        self.objects_absolute = [convert_to_global(obj_loc_rel, self.theta_environment) for obj_loc_rel in self.objects_relative]
+        self.objects_absolute_target = [convert_to_global(obj_loc_rel, self.theta_environment) for obj_loc_rel in self.objects_relative_target]
         self.objects_color_target = init_conditions.get("objects_color_target", init_conditions["objects_color"])
         self.start_dist = init_conditions["start_dist"]
         
@@ -172,9 +172,6 @@ class BaseSimulator():
                 path=self.sim_dir + f"/pybullet_pics{0}",
                 frame_num=int(self.simulation_counter),
                 )
-
-    def get_latest_displacement(self):
-        return self.timestepwise_displacement_array[-1]
 
     def export_plots(self):
         x_data = np.array(self.global_pos_array)[:, 0]
