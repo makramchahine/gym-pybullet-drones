@@ -1,21 +1,18 @@
 import numpy as np
 from gym import spaces
 import pybullet as p
+import pybullet_data
 
 from gym_pybullet_drones.envs.BaseAviary import BaseAviary
 from gym_pybullet_drones.utils.enums import DroneModel, Physics
 
-# TODO: Change to relative
+# If you don't have these urdfs in the pybullet_data package, 
+# run gym-pybullet-drones/gym_pybullet_drones/assets/copy_assets_to_pybullet_data_folder.py
 filename_map = {
-    'R': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2red.urdf",
-    'B': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2blue.urdf",
-    'G': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2green.urdf",
+    'R': f"{pybullet_data.getDataPath()}/sphere2red.urdf",
+    'B': f"{pybullet_data.getDataPath()}/sphere2blue.urdf",
+    'G': f"{pybullet_data.getDataPath()}/sphere2green.urdf",
 }
-# filename_map = {
-#     'R': "sphere2red.urdf",
-#     'B': "sphere2blue.urdf",
-#     'G': "sphere2green.urdf",
-# }
 
 class CtrlAviary(BaseAviary):
     """Multi-drone environment class for control applications."""

@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 
 from gym_pybullet_drones.utils.enums import ImageType
 
-from culekta_utils import *
-from simulator_utils import *
+from gym_pybullet_drones.examples.culekta_utils import *
+from gym_pybullet_drones.examples.simulator_utils import *
 from gym_pybullet_drones.examples.simulator_base import BaseSimulator
 
 from gym_pybullet_drones.examples.schemas import InitConditionsSchema

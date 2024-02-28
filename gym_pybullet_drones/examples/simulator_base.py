@@ -14,8 +14,8 @@ from gym_pybullet_drones.utils.Logger import Logger
 from gym_pybullet_drones.examples.schemas import InitConditionsSchema
 
 
-from culekta_utils import *
-from simulator_utils import *
+from gym_pybullet_drones.examples.culekta_utils import *
+from gym_pybullet_drones.examples.simulator_utils import *
 from gym_pybullet_drones.examples.default_pyb_settings import *
 aligned_follower = True
 
