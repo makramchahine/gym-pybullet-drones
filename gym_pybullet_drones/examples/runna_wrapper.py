@@ -21,7 +21,7 @@ sys.path.append("/home/makramchahine/repos/gym-pybullet-drones/gym_pybullet_dron
 from gym_pybullet_drones.utils.enums import DroneModel, Physics
 from gym_pybullet_drones.utils.utils import sync, str2bool
 
-from runna_hike import run
+from runna_hike import run_pybullet_only_hike
 
 DEFAULT_DRONES = DroneModel("cf2x")
 DEFAULT_NUM_DRONES = 1
@@ -45,27 +45,28 @@ RUNS_PER_MODEL = 10
 
 normalize_path = None
 base_runner_folders = [
-#    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_600_1_10hzf_bm_px_td_nlsp_gn_nt_srf_300sf_irreg2_64_hyp_cfc",
+    # "/home/makramchahine/repos/gaussian-splatting/drone_causality/runner_models/filtered_d6_nonorm_ss2_600_1_10hzf_bm_px_td_nlsp_gn_nt_pybullet_srf_300sf_irreg2_64_hyp_cfc_debugmerge_glorot"
+   "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_600_1_10hzf_bm_px_td_nlsp_gn_nt_srf_300sf_irreg2_64_hyp_cfc",
 #    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_600_3hzf_bm_px_td_nlsp_gn_nt_srf_300sf_irreg2_64_hyp_cfc",
-   "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_200_9hzf_bm_px_td_nlsp_gn_nt_srf_150sf_irreg2_64_hyp_cfc",
+#    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_200_9hzf_bm_px_td_nlsp_gn_nt_srf_150sf_irreg2_64_hyp_cfc",
 #    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_600_3hzf_bm_px_td_nlsp_gn_nt_srf_300sf_irreg2_64_hyp_lstm",
 #    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_200_9hzf_bm_px_td_nlsp_gn_nt_srf_150sf_irreg2_64_hyp_lstm",
 #    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_600_1_10hzf_bm_px_td_nlsp_gn_nt_pybullet_srf_300sf_irreg2_64_hyp_cfc",
 #    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_600_3hzf_bm_px_td_nlsp_gn_nt_pybullet_srf_300sf_irreg2_64_hyp_cfc",
-   "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_200_9hzf_bm_px_td_nlsp_gn_nt_pybullet_srf_150sf_irreg2_64_hyp_cfc",
+#    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_200_9hzf_bm_px_td_nlsp_gn_nt_pybullet_srf_150sf_irreg2_64_hyp_cfc",
 #    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_600_3hzf_bm_px_td_nlsp_gn_nt_pybullet_srf_300sf_irreg2_64_hyp_lstm",
 #    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_200_9hzf_bm_px_td_nlsp_gn_nt_pybullet_srf_150sf_irreg2_64_hyp_lstm",
 ]
 record_hzs = [
     3,
-    3,
+    # 3,
     # 9,
     # 3,
     # 9
 ]
 variable_timesteps = [
     True,
-    True,
+    # True,
     # True,
     # False,
     # False
@@ -207,7 +208,7 @@ if __name__ == "__main__":
         for i, (obj, loc) in enumerate(zip(OBJECTS, LOCATIONS_REL)):
             total_list.append((obj, loc))
 
-    joblib.Parallel(n_jobs=10)(joblib.delayed(run)(d, output_folder=output_folder_path, params_path=params_path, checkpoint_path=checkpoint_path, duration_sec=DEFAULT_DURATION_SEC, record_hz=record_hz, variable_timestep=variable_timestep) for d, params_path, checkpoint_path, output_folder_path, record_hz, variable_timestep in tqdm(zip(total_list, concurrent_params_paths, concurrent_checkpoint_paths, output_folder_paths, expanded_record_hzs, expanded_variable_timesteps)))
+    joblib.Parallel(n_jobs=10)(joblib.delayed(run_pybullet_only_hike)(d, output_folder=output_folder_path, params_path=params_path, checkpoint_path=checkpoint_path, duration_sec=DEFAULT_DURATION_SEC, record_hz=record_hz) for d, params_path, checkpoint_path, output_folder_path, record_hz, variable_timestep in tqdm(zip(total_list, concurrent_params_paths, concurrent_checkpoint_paths, output_folder_paths, expanded_record_hzs, expanded_variable_timesteps)))
 
 
     video_filename = "rand.mp4"
@@ -221,8 +222,8 @@ if __name__ == "__main__":
         try:
             for eval_dir in os.listdir(default_output_folder):
                 success_array = []
-                for run in sorted(os.listdir(os.path.join(default_output_folder, eval_dir))[:]):
-                    absolute_path = os.path.join(default_output_folder, eval_dir, run)
+                for run_pybullet_only_hike in sorted(os.listdir(os.path.join(default_output_folder, eval_dir))[:]):
+                    absolute_path = os.path.join(default_output_folder, eval_dir, run_pybullet_only_hike)
                     print(absolute_path)
                     try:
                         if "rand.mp4" not in os.listdir(absolute_path):

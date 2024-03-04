@@ -84,8 +84,6 @@ class EvalSimulator(BaseSimulator):
 
     def safe_update_target_index(self):
         self.target_index += 1
-        if self.target_index >= len(self.objects_relative_target):
-            self.target_index = len(self.objects_relative_target) - 1
 
     # TODO: Fix automated evaluation
     def evaluate_completed_single_task(self, state):
@@ -93,29 +91,32 @@ class EvalSimulator(BaseSimulator):
         x, y, z = state[0], state[1], state[2]
         yaw = state[9]
 
-        print(f"\nTarget: {self.objects_relative_target[self.target_index]}")
-        if object_in_view(x, y, yaw, self.objects_relative_target[self.target_index]):
+        # print(f"\nTarget: {self.objects_color_target[self.target_index]}, {object_in_view(x, y, yaw, self.objects_relative_target[self.target_index])}, {self.alive_obj_previously_in_view}")
+        if object_in_view(x, y, yaw, self.objects_absolute_target[self.target_index]):
             self.alive_obj_previously_in_view = True
             return
 
-        if not object_in_view(x, y, yaw, self.objects_relative_target[self.target_index]) and self.alive_obj_previously_in_view:
+        if not object_in_view(x, y, yaw, self.objects_absolute_target[self.target_index]) and self.alive_obj_previously_in_view:
+            dist_from_ball = np.linalg.norm(np.array([x, y]) - np.array(self.objects_absolute_target[self.target_index][:2]))
+            print(f"Distance in the xy axis: {dist_from_ball}")
+                
+            # TODO: Add distance checking
             # Correct turn
-            if (self.objects_relative_target[self.target_index] == 'R' and drone_turned_left(x, y, yaw, self.objects_relative_target[self.target_index]) or (self.objects_relative_target[self.target_index] == 'B' and drone_turned_right(x, y, yaw, self.objects_relative_target[self.target_index]))):
+            if (
+                (self.objects_color_target[self.target_index] == 'R' and 
+                 drone_turned_left(x, y, yaw, self.objects_absolute_target[self.target_index]) and 
+                 dist_from_ball > 0.5
+                 ) or 
+                 (self.objects_color_target[self.target_index] == 'B' and 
+                  drone_turned_right(x, y, yaw, self.objects_absolute_target[self.target_index]) and 
+                  dist_from_ball > 0.5)
+                ):
                 print(f"Correct turn for {self.target_index}")
-                # Remove ball then add next object
-                # if self.vanish_mode:
-                #     self.env.removeObject(self.alive_obj_id)
-                #     print(f"Removed Item: {self.alive_obj_id}")
-                #     if not (self.target_index > len(self.ordered_objs) - 1):
-                #         self.alive_obj_id = self.env.addObject(self.ordered_objs[self.target_index], self.objects_relative_target[self.target_index])
-                #         print(f"New Item: {self.alive_obj_id}")
 
-                self.window_outcomes.append(self.objects_relative_target[self.target_index])
-                # self.target_index += 1
+                self.window_outcomes.append(self.objects_color_target[self.target_index])
                 self.safe_update_target_index()
-            elif self.objects_relative_target[self.target_index] == 'R' or self.objects_relative_target[self.target_index] == 'B':
+            elif self.objects_color_target[self.target_index] == 'R' or self.objects_color_target[self.target_index] == 'B':
                 self.window_outcomes.append("N")
-                # self.target_index += 1
                 self.safe_update_target_index()
             self.alive_obj_previously_in_view = False
 
@@ -124,12 +125,12 @@ class EvalSimulator(BaseSimulator):
 
         try:
             with open(os.path.join(self.sim_dir, 'finish.txt'), 'w') as f:
-                max_len = max(len(self.window_outcomes), len(self.objects_relative_target))
+                max_len = max(len(self.window_outcomes), len(self.objects_color_target))
                 # pad self.window_outcomes, self.ordered_objs with X's if they are too short
                 self.window_outcomes = self.window_outcomes + ['X'] * (max_len - len(self.window_outcomes))
-                self.objects_relative_target = self.objects_relative_target + ['X'] * (max_len - len(self.objects_relative_target))
+                self.objects_color_target = self.objects_color_target + ['X'] * (max_len - len(self.objects_color_target))
 
-                for window_outcome, color in zip(self.window_outcomes, self.objects_relative_target):
+                for window_outcome, color in zip(self.window_outcomes, self.objects_color_target):
                     f.write(f"{window_outcome},{color}\n")
         except Exception as e:
             print(e)

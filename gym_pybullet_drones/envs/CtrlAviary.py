@@ -87,9 +87,12 @@ class CtrlAviary(BaseAviary):
 
         """
         assert color in filename_map.keys(), "Color not supported"
-                
+
+        p.loadURDF("samurai.urdf",
+            physicsClientId=self.CLIENT
+        )     
         return p.loadURDF(filename_map[color],
-                [*xy_loc, 0.1],
+                [*xy_loc, 0.6],
                 p.getQuaternionFromEuler([0,0,0]),
                 physicsClientId=self.CLIENT,
                 globalScaling=0.2
