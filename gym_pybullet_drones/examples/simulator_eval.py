@@ -15,8 +15,9 @@ from gym_pybullet_drones.examples.schemas import InitConditionsSchema
 FINISH_COUNTER_THRESHOLD = 1.5 # in seconds
 
 class EvalSimulator(BaseSimulator):
-    def __init__(self, sim_dir: str, init_conditions: InitConditionsSchema, record_hz: str):
+    def __init__(self, sim_dir: str, init_conditions: InitConditionsSchema, record_hz: str, selected_index: int):
         super().__init__(sim_dir, init_conditions, record_hz)
+        self.selected_index = selected_index
 
     def check_completed_all_goals(self):
         return self.target_index >= len(self.objects_relative_target)
@@ -132,5 +133,26 @@ class EvalSimulator(BaseSimulator):
 
                 for window_outcome, color in zip(self.window_outcomes, self.objects_color_target):
                     f.write(f"{window_outcome},{color}\n")
+        except Exception as e:
+            print(e)
+
+        try:
+            with open(os.path.join(self.sim_dir, 'last_view.txt'), 'w') as f:
+                x, y, yaw = self.global_pos_array[-1][0], self.global_pos_array[-1][1], self.global_pos_array[-1][3]
+                x, y = convert_to_relative([x, y], -self.theta_environment)[:2]
+
+                target_position = self.objects_absolute_target[self.selected_index]
+                relative_angle = get_relative_angle_to_target(x, y, yaw, target_position)
+
+                other_relative_angles = [get_relative_angle_to_target(x, y, yaw, candidate_position) for candidate_position in self.objects_absolute_target if candidate_position != target_position]
+                if abs(relative_angle) < min(np.abs(np.array(other_relative_angles))):
+                    f.write(f"success\n")
+                else:
+                    f.write(f"fail\n")
+                f.write(f"target_relative_angle: {relative_angle}\n")
+                f.write(f"other_relative_angles: {other_relative_angles}\n")
+                print(f"target_positions: {self.objects_absolute_target}")
+                print(f"final_position: {x, y, yaw}")
+
         except Exception as e:
             print(e)

@@ -17,7 +17,8 @@
 				<mesh filename="sphere_smooth.obj" scale="0.5 0.5 0.5"/>      
       </geometry>
       <material name="blue">
-        <color rgba="0.2 0.2 1 1"/>
+        <!-- <color rgba="0.2 0.2 1 1"/> -->
+        <color rgba="1 0.984 0 1"/>
         <specular rgb="1 1 1"/>
       </material>
     </visual>

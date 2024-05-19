@@ -41,7 +41,10 @@ def signed_angular_distance(theta1, theta2):
     return ((theta2 - theta1 + np.pi) % (2 * np.pi)) - np.pi
 
 def convert_to_global(rel_pos, theta):
-    return (np.cos(theta) * rel_pos[0] - np.sin(theta) * rel_pos[1], np.sin(theta) * rel_pos[0] + np.cos(theta) * rel_pos[1])
+    if len(rel_pos) == 2:
+        return (np.cos(theta) * rel_pos[0] - np.sin(theta) * rel_pos[1], np.sin(theta) * rel_pos[0] + np.cos(theta) * rel_pos[1])
+    else:
+        return (np.cos(theta) * rel_pos[0] - np.sin(theta) * rel_pos[1], np.sin(theta) * rel_pos[0] + np.cos(theta) * rel_pos[1], rel_pos[2])
 
 def convert_to_relative(global_pos, theta):
     return (np.cos(theta) * global_pos[0] + np.sin(theta) * global_pos[1], -np.sin(theta) * global_pos[0] + np.cos(theta) * global_pos[1])

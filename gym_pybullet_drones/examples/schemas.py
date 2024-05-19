@@ -3,7 +3,7 @@ import json
 from marshmallow import Schema, fields, validate
 
 class InitConditionsSchema(Schema):
-    task_name = fields.String(required=True, validate=validate.OneOf(["2choice", "fly_and_turn", "closed_loop_inference"]))
+    task_name = fields.String(required=True, validate=validate.OneOf(["2choice", "fly_and_turn", "closed_loop_inference", "4turn"]))
     start_heights = fields.List(fields.Float(required=True))
     target_heights = fields.List(fields.Float(required=True))
     start_dist = fields.Float(required=False)
@@ -16,6 +16,7 @@ class InitConditionsSchema(Schema):
     objects_relative_target = fields.List(fields.Tuple((fields.Float(), fields.Float())), required=False)
     objects_color_target = fields.List(fields.String(), required=False)
     correct_side = fields.String(required=False)
+    correct_color = fields.String(required=False)
 
 class InitConditionsClosedLoopInferenceSchema(InitConditionsSchema):
     task_name = fields.String(required=True, validate=validate.Equal("closed_loop_inference"))

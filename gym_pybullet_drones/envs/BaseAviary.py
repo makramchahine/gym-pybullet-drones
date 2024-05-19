@@ -458,6 +458,21 @@ class BaseAviary(gym.Env):
         #### Load ground plane, drone and obstacles models #########
         self.PLANE_ID = p.loadURDF("plane.urdf", physicsClientId=self.CLIENT)
 
+        # print(self.INIT_XYZS)
+        if len(self.INIT_XYZS) == 1 and isinstance(self.INIT_XYZS, collections.Iterable):
+            self.INIT_XYZS = self.INIT_XYZS[0]
+        # print(self.INIT_XYZS)
+        # make sure all elements are floats in the array else access first element and convert to float
+        for i, val in enumerate(self.INIT_XYZS):
+            # print(val)
+            # if is iterable i.e. list or array or dict
+            if isinstance(val, collections.Iterable):
+                self.INIT_XYZS[i] = float(val[0])
+                # print(self.INIT_XYZS[i])
+        self.INIT_XYZS = np.array([self.INIT_XYZS])
+
+        print(self.INIT_XYZS)
+        # exit()
         self.DRONE_IDS = np.array([p.loadURDF(pkg_resources.resource_filename('gym_pybullet_drones', 'assets/'+self.URDF),
                                               self.INIT_XYZS[i,:],
                                               p.getQuaternionFromEuler(self.INIT_RPYS[i,:]),
@@ -944,6 +959,9 @@ class BaseAviary(gym.Env):
         These obstacles are loaded from standard URDF files included in Bullet.
 
         """
+        # p.loadSDF("stadium.sdf",
+        #            physicsClientId=self.CLIENT
+        #            )
         p.loadURDF("samurai.urdf",
                    physicsClientId=self.CLIENT
                    )

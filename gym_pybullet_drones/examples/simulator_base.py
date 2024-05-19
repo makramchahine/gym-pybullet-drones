@@ -30,16 +30,19 @@ class BaseSimulator():
         self.control_freq_hz = DEFAULT_CONTROL_FREQ_HZ
         self.record_freq_hz = record_hz
         self.duration_sec = DEFAULT_DURATION_SEC
-        self.start_height = init_conditions["start_heights"][0]
-        self.target_height = init_conditions["target_heights"][0]
+        self.start_height = init_conditions["start_heights"]
+        self.target_height = init_conditions["target_heights"]
         self.theta_offset = init_conditions["theta_offset"]
         self.theta_environment = init_conditions["theta_environment"]
         self.objects_color = init_conditions["objects_color"]
         self.objects_relative = init_conditions["objects_relative"]
         self.objects_relative_target = init_conditions.get("objects_relative_target", init_conditions["objects_relative"])
         
+        # TODO: Change objects_absolute/objects_absolute_target to be xyz instead of just xy
         self.objects_absolute = [convert_to_global(obj_loc_rel, self.theta_environment) for obj_loc_rel in self.objects_relative]
+        self.objects_absolute = [(obj[0], obj[1], self.target_height[i]) for i, obj in enumerate(self.objects_absolute)]
         self.objects_absolute_target = [convert_to_global(obj_loc_rel, self.theta_environment) for obj_loc_rel in self.objects_relative_target]
+        self.objects_absolute_target = [(obj[0], obj[1], self.target_height[i]) for i, obj in enumerate(self.objects_absolute)]
         self.objects_color_target = init_conditions.get("objects_color_target", init_conditions["objects_color"])
         self.start_dist = init_conditions["start_dist"]
         
@@ -112,7 +115,7 @@ class BaseSimulator():
                 "colors": self.objects_color,
                 "locations": self.objects_absolute
             }
-        print(f"custom_obj_location: {custom_obj_location}")
+        print(f"\n\ncustom_obj_location: {custom_obj_location}")
         self.env = CtrlAviary(drone_model=drone,
                         num_drones=self.num_drones,
                         initial_xyzs=self.INIT_XYZS,
@@ -203,13 +206,13 @@ class BaseSimulator():
         fig.savefig(self.sim_dir + "/sim_pos.jpg")
 
         # ! timestepwise_displacement as a 2x2 subplot
-        timestepwise_displacement_data = np.array(self.timestepwise_displacement_array)
-        fig2, axs2 = plt.subplots(2, 2)
-        labels = ['X Displacement', 'Y Displacement', 'Z Displacement', 'Yaw Displacement']
-        for idx, label in enumerate(labels):
-            axs2.flat[idx].plot(timestepwise_displacement_data[:, idx])
-            axs2.flat[idx].set_ylabel(label)
-        fig2.savefig(self.sim_dir + "/timestepwise_displacement.jpg")
+        # timestepwise_displacement_data = np.array(self.timestepwise_displacement_array)
+        # fig2, axs2 = plt.subplots(2, 2)
+        # labels = ['X Displacement', 'Y Displacement', 'Z Displacement', 'Yaw Displacement']
+        # for idx, label in enumerate(labels):
+        #     axs2.flat[idx].plot(timestepwise_displacement_data[:, idx])
+        #     axs2.flat[idx].set_ylabel(label)
+        # fig2.savefig(self.sim_dir + "/timestepwise_displacement.jpg")
 
         # ! Velocity Plot
         vel_data = np.array(self.vel_array)

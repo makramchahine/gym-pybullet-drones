@@ -2,17 +2,13 @@ import numpy as np
 from gym import spaces
 import pybullet as p
 import pybullet_data
+import random
 
 from gym_pybullet_drones.envs.BaseAviary import BaseAviary
 from gym_pybullet_drones.utils.enums import DroneModel, Physics
 
-# If you don't have these urdfs in the pybullet_data package, 
-# run gym-pybullet-drones/gym_pybullet_drones/assets/copy_assets_to_pybullet_data_folder.py
-filename_map = {
-    'R': f"{pybullet_data.getDataPath()}/sphere2red.urdf",
-    'B': f"{pybullet_data.getDataPath()}/sphere2blue.urdf",
-    'G': f"{pybullet_data.getDataPath()}/sphere2green.urdf",
-}
+from env_configs import URDF_MAP, ORIENTATION_MAP, SCALING_MAP
+from inference_configs import env_name
 
 class CtrlAviary(BaseAviary):
     """Multi-drone environment class for control applications."""
@@ -86,16 +82,22 @@ class CtrlAviary(BaseAviary):
         This method is called by the parent class constructor.
 
         """
-        assert color in filename_map.keys(), "Color not supported"
+        assert color in URDF_MAP.keys(), "Color not supported"
+
+        # p.loadSDF("stadium.sdf",
+        #     physicsClientId=self.CLIENT
+        # )
 
         p.loadURDF("samurai.urdf",
             physicsClientId=self.CLIENT
-        )     
-        return p.loadURDF(filename_map[color],
-                [*xy_loc, 0.6],
-                p.getQuaternionFromEuler([0,0,0]),
+        )
+
+        xyz_loc = [*xy_loc, 0.6] if len(xy_loc) == 2 else [*xy_loc]
+        return p.loadURDF(URDF_MAP[color],
+                xyz_loc,
+                p.getQuaternionFromEuler(ORIENTATION_MAP[color]),
                 physicsClientId=self.CLIENT,
-                globalScaling=0.2
+                globalScaling=SCALING_MAP[color]
                 )
     
     def removeObject(self, obj_id):
@@ -112,20 +114,40 @@ class CtrlAviary(BaseAviary):
         # if self.CUSTOM_OBJECT_LOCATION is a list of tuples:
         elif type(self.CUSTOM_OBJECT_LOCATION) is dict and "colors" in self.CUSTOM_OBJECT_LOCATION.keys() and "locations" in self.CUSTOM_OBJECT_LOCATION.keys():
             for color, location in zip(self.CUSTOM_OBJECT_LOCATION["colors"], self.CUSTOM_OBJECT_LOCATION["locations"]):
-                # add new urdf files at /home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/samurai.urdf
+                # add new urdf files at /home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/stadium.sdf
 
                 print(f"added {color} at {location}")
+
+                if len(location) == 2:
+                    location = (*location, 0.6)
                 
-                p.loadURDF(filename_map[color],
-                        [*location, 0.1 + 0.5],
-                        p.getQuaternionFromEuler([0,0,0]),
+                p.loadURDF(URDF_MAP[color],
+                        [*location],
+                        p.getQuaternionFromEuler(ORIENTATION_MAP[color]),
                         physicsClientId=self.CLIENT,
-                        globalScaling=0.2
+                        globalScaling=SCALING_MAP[color]
                         )
             
-        p.loadURDF("samurai.urdf",
-            physicsClientId=self.CLIENT
-        )
+        # p.loadSDF("stadium.sdf",
+        #     physicsClientId=self.CLIENT
+        # )
+
+        # if random.random() < 0.5:
+
+        # else:
+        if env_name == "samurai":
+            p.loadURDF("samurai.urdf",
+                physicsClientId=self.CLIENT
+            )
+        elif env_name == "arena":
+            p.loadURDF("arena.urdf",
+                        self.CUSTOM_OBJECT_LOCATION["locations"][0],
+                        p.getQuaternionFromEuler([np.pi / 2, 0, 0]),
+                        physicsClientId=self.CLIENT,
+                        globalScaling=1 / 1000
+            )
+        else:
+            raise ValueError("Invalid environment name: " + env_name)
 
     def _actionSpace(self):
         """Returns the action space of the environment.

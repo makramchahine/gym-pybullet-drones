@@ -17,7 +17,7 @@ from simulator_base import BaseSimulator
 from default_pyb_settings import *
 
 FINISH_COUNTER_THRESHOLD = 32
-RANDOM_WALK = True
+RANDOM_WALK = False
 TARGET_NUM_TIMESTEPS_TO_CRITICAL = (55, 90) # this affects the rate of drone control recovery
 CONTROL_STEP_NORMALIZATION = 3
 
@@ -88,13 +88,13 @@ class TrainSimulator(BaseSimulator):
         lift_speed = self.get_adj_z_speed(height_dist)
         return speed, yaw_speed, lift_speed
 
-    def _step_trajectory(self, hold=False):
+    def _step_trajectory(self, hold=False, turn_only=False):
         """
         Modifies:
             self.TARGET_POS, self.TARGET_ATT, self.FINAL_THETA, self.reached_critical
         """
         speeds = []
-        print(f"self.objects_absolute_target: {self.objects_absolute_target}")
+        # print(f"self.objects_absolute_target: {self.objects_absolute_target}")
         for i, (target_pos, target_att, init_theta, final_theta, final_target) in enumerate(zip(self.TARGET_POS, self.TARGET_ATT, self.INIT_THETA, self.FINAL_THETA, self.objects_absolute_target)):
             last_pos = target_pos[-1]    # X, Y, Z
             last_yaw = target_att[-1][2] # R, P, Y
@@ -126,6 +126,10 @@ class TrainSimulator(BaseSimulator):
                     yaw_speed, lift_speed = self._compute_turn_effects(last_pos, final_target, yaw_speed, lift_speed)
                 new_theta = last_yaw + yaw_speed
 
+            # Reset xy speed and lift speed if turn_only
+            if turn_only:
+                speed = 0
+                lift_speed = 0
 
             if self.critical_action == 'G':
                 delta_z = lift_speed if not self.previously_reached_critical else -DROP_SPEED / self.control_freq_hz * (last_height / DROP_MAX_HEIGHT)
@@ -136,6 +140,7 @@ class TrainSimulator(BaseSimulator):
                 self.reached_critical = dist < self.critical_dist
                 new_height = (last_height + delta_z) if (lift_speed != 0 or hold) else self.target_height
         
+
             delta_pos = convert_to_global([speed, 0], new_theta)
             target_pos.append([last_pos[0] + delta_pos[0], last_pos[1] + delta_pos[1], new_height])
             target_att.append([0, 0, new_theta])
@@ -173,13 +178,21 @@ class TrainSimulator(BaseSimulator):
             return True
         return False
     
-    def precompute_trajectory(self):
+    def limit_trajectory_to_num_frames(self, frame_limit = 240 * 8):
+        if self.frame_counter > frame_limit:
+            return True
+        return False
+    
+    def precompute_trajectory(self, turn_only=False):
         self.init_stable_trajectory()
 
         finished = False
         while not finished:
-            self._step_trajectory()
-            finished = self.evaluate_trajectory()
+            self._step_trajectory(turn_only=turn_only)
+            if turn_only:
+                finished = self.limit_trajectory_to_num_frames()
+            else:
+                finished = self.evaluate_trajectory()
 
         if RANDOM_WALK:
             print("self.checkpoint_frame", self.checkpoint_frame)
