@@ -7,6 +7,7 @@ from datetime import datetime
 import numpy as np
 import json
 import argparse
+import copy
 
 from schemas import InitConditionsSchema
 from gym_pybullet_drones.examples.simulator_base import DEFAULT_NUM_DRONES
@@ -64,7 +65,7 @@ def generate_init_conditions_fly_and_turn(object_color) -> InitConditionsSchema:
 
     return init_conditions
 
-def generate_init_conditions_2choice(object_color) -> InitConditionsSchema:
+def generate_init_conditions_2choice(object_tags, target_tags) -> InitConditionsSchema:
     """
     Specific implementation with weighted probabilities
 
@@ -91,8 +92,6 @@ def generate_init_conditions_2choice(object_color) -> InitConditionsSchema:
         correct_side = "L"
         objects_relative = [(start_dist, orthogonal_dist), (start_dist, -orthogonal_dist)]
     
-    objects_color = [object_color, "B" if object_color == "R" else "R"]
-    objects_color_target = [object_color]
     objects_relative_target = objects_relative[0:1]
     
     init_conditions_schema = InitConditionsSchema()
@@ -104,9 +103,9 @@ def generate_init_conditions_2choice(object_color) -> InitConditionsSchema:
         "theta_offset": theta_offset,
         "theta_environment": theta_environment,
         "objects_relative": objects_relative,
-        "objects_color": objects_color,
+        "objects_color": object_tags,
         "objects_relative_target": objects_relative_target,
-        "objects_color_target": objects_color_target,
+        "objects_color_target": target_tags,
         "correct_side": correct_side
     }
     init_conditions = init_conditions_schema.load(init_conditions)
@@ -188,30 +187,11 @@ function_map = {
     "4turn": generate_four_init_conditions_turn_only
 }
 
-def generate_one_training_trajectory(output_folder, obj_color, record_hz, task_tag: str):
-    sim_name = "save-flight-" + datetime.now().strftime("%m.%d.%Y_%H.%M.%S.%f") # include milliseconds in save name for parallel runs
-    sim_dir = os.path.join(output_folder, sim_name)
-    setup_folders(sim_dir, DEFAULT_NUM_DRONES)
-
-    generate_init_conditions_func = function_map[task_tag]
-    init_conditions = generate_init_conditions_func(obj_color)
-    with open(os.path.join(sim_dir, 'init_conditions.json'), 'w') as f:
-        json.dump(init_conditions, f)
-
-    sim = TrainSimulator(sim_dir, init_conditions, record_hz, task_tag)
-    
-    sim.precompute_trajectory()
-    sim.run_simulation_to_completion()
-
-    sim.export_plots()
-    sim.logger.save_as_csv(sim_name, sim.custom_timesteps if sim.custom_timesteps else None)  # Optional CSV save
-
 def generate_multiple_training_trajectory(output_folder, obj_color, record_hz, task_tag: str):
     sim_name = "save-flight-" + datetime.now().strftime("%m.%d.%Y_%H.%M.%S.%f") # include milliseconds in save name for parallel runs
     sim_dir = os.path.join(output_folder, sim_name)
     for i in range(4):
         setup_folders(f"{sim_dir}_{i}", DEFAULT_NUM_DRONES)
-
 
     generate_init_conditions_func = function_map[task_tag]
     init_conditions_list = generate_init_conditions_func()
@@ -227,23 +207,80 @@ def generate_multiple_training_trajectory(output_folder, obj_color, record_hz, t
         sim.export_plots()
         sim.logger.save_as_csv(f"{sim_name}_{i}", sim.custom_timesteps if sim.custom_timesteps else None)
 
+def setup_folders_euclidean_product(base_folder, sim_name, target_tag, config, num_drones=1):
+    """ Returns true if target_tag folder already exists in sim_name folder"""
+    if not os.path.exists(base_folder):
+        os.makedirs(base_folder + '/')
+    if not os.path.exists(base_folder + '/' + sim_name):
+        os.makedirs(base_folder + '/' + sim_name)
+    if not os.path.exists(base_folder + '/' + sim_name + '/' + target_tag):
+        os.makedirs(base_folder + '/' + sim_name + '/' + target_tag)
+        config_path = os.path.join(base_folder, sim_name, target_tag, 'config.json')
+        with open(config_path, 'w') as config_file:
+            json.dump(config, config_file)
+        for d in range(num_drones):
+            if not os.path.exists(base_folder + '/' + sim_name + '/' + target_tag + f"/pics{d}"):
+                os.makedirs(base_folder + '/' + sim_name + '/' + target_tag + f"/pics{d}/")
+            if not os.path.exists(base_folder + '/' + sim_name + '/' + target_tag + f"/pybullet_pics{d}"):
+                os.makedirs(base_folder + '/' + sim_name + '/' + target_tag + f"/pybullet_pics{d}/")
+        return False
+    else: 
+        return True
+
+
+
+def generate_euclidean_product_trajectories(output_folder, run_number, config, record_hz, task_tag: str):
+    sim_name = f"run_{run_number}"
+    target_tag = config["objects_color_target"][0]
+
+    already_exists = setup_folders_euclidean_product(output_folder, sim_name, target_tag, config)
+    if already_exists:
+        return
+
+    sim = TrainSimulator(f"{output_folder}/{sim_name}/{target_tag}", config, record_hz, task_tag)
+    
+    sim.precompute_trajectory(turn_only=True)
+    sim.run_simulation_to_completion()
+
+    sim.export_plots()
+    sim.logger.save_as_csv(f"{output_folder}/{sim_name}/{target_tag}", sim.custom_timesteps if sim.custom_timesteps else None)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Provide base directory.')
     parser.add_argument('--base_dir', type=str, default="./generated_paths/train_turn_only", help='Base directory for the script')
     parser.add_argument("--samples", type=int, default=10, help="Number of samples")
     parser.add_argument("--record_hz", type=str, default=1, help="Recording frequency")
-    parser.add_argument("--task_tag", type=str, choices=["2choice", "fly_and_turn", "4turn"], default="4turn", help="Task tag")
+    parser.add_argument("--task_tag", type=str, choices=["2choice", "fly_and_turn", "4turn"], default="2choice", help="Task tag")
     args = parser.parse_args()
+
+    possible_objects = ["red ball", "blue ball", "yellow_ball", "green_ball", "purple_ball", "red_cube", "blue_cube", "yellow_cube", "green_cube", "purple_cube", "red_pyramid", "blue_pyramid", "yellow_pyramid", "green_pyramid", "purple_pyramid"]
+    possible_targets = ["red ball", "blue ball", "yellow_ball", "green_ball", "purple_ball", "red_cube", "blue_cube", "yellow_cube", "green_cube", "purple_cube", "red_pyramid", "blue_pyramid", "yellow_pyramid", "green_pyramid", "purple_pyramid"]
     
+    all_configs = []
+    run_numbers = []
+
+    for run_number in range(args.samples):
+        template_init_conditions = generate_init_conditions_2choice(["red ball", "blue ball"], ["red ball"])
+
+        for target in possible_targets:
+            non_target = [obj for obj in possible_objects if obj != target]
+            objects_list = [target, non_target]
+            specific_init_conditions = copy.deepcopy(template_init_conditions)
+            specific_init_conditions["objects_color"] = objects_list
+            specific_init_conditions["objects_color_target"] = [target]
+
+            run_numbers.append(run_number)
+            all_configs.append(specific_init_conditions)
+
     base_dir = args.base_dir
     samples = args.samples
     record_hz = args.record_hz # ints or "1-10"
     task_tag = args.task_tag
     
-    OBJECTS = ["R", "B"]
-    NUM_INITIALIZATIONS = samples // len(OBJECTS)
-    total_list = OBJECTS * NUM_INITIALIZATIONS
-    random.shuffle(total_list)
+    print(len(all_configs))
+    print(len(run_numbers))
 
-    joblib.Parallel(n_jobs=16)(joblib.delayed(generate_multiple_training_trajectory)(base_dir, d, record_hz, task_tag) for d in tqdm(total_list))
+    joblib.Parallel(n_jobs=16)(joblib.delayed(generate_euclidean_product_trajectories)(base_dir, run_number, config, record_hz, task_tag) for run_number, config in tqdm(zip(run_numbers, all_configs)))
+    # joblib.Parallel(n_jobs=16)(joblib.delayed(generate_euclidean_product_trajectories)(base_dir, d, record_hz, task_tag) for d in tqdm(total_list))
+
