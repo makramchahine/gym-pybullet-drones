@@ -40,9 +40,9 @@ class BaseSimulator():
         
         # TODO: Change objects_absolute/objects_absolute_target to be xyz instead of just xy
         self.objects_absolute = [convert_to_global(obj_loc_rel, self.theta_environment) for obj_loc_rel in self.objects_relative]
-        self.objects_absolute = [(obj[0], obj[1], self.target_height[i]) for i, obj in enumerate(self.objects_absolute)]
+        self.objects_absolute = [(obj[0], obj[1], self.target_height) for i, obj in enumerate(self.objects_absolute)]
         self.objects_absolute_target = [convert_to_global(obj_loc_rel, self.theta_environment) for obj_loc_rel in self.objects_relative_target]
-        self.objects_absolute_target = [(obj[0], obj[1], self.target_height[i]) for i, obj in enumerate(self.objects_absolute)]
+        self.objects_absolute_target = [(obj[0], obj[1], self.target_height) for i, obj in enumerate(self.objects_absolute_target)]
         self.objects_color_target = init_conditions.get("objects_color_target", init_conditions["objects_color"])
         self.start_dist = init_conditions["start_dist"]
         
@@ -115,7 +115,6 @@ class BaseSimulator():
                 "colors": self.objects_color,
                 "locations": self.objects_absolute
             }
-        print(f"\n\ncustom_obj_location: {custom_obj_location}")
         self.env = CtrlAviary(drone_model=drone,
                         num_drones=self.num_drones,
                         initial_xyzs=self.INIT_XYZS,

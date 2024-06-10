@@ -9,11 +9,13 @@ import json
 import argparse
 import copy
 
+os.environ["TASK"] = "activations"
+os.environ["ENV_NAME"] = "samurai"
+
 from schemas import InitConditionsSchema
 from gym_pybullet_drones.examples.simulator_base import DEFAULT_NUM_DRONES
 from gym_pybullet_drones.examples.simulator_train import TrainSimulator
 from culekta_utils import setup_folders
-
 
 def generate_init_conditions_fly_and_turn(object_color) -> InitConditionsSchema:
     """
@@ -248,14 +250,14 @@ def generate_euclidean_product_trajectories(output_folder, run_number, config, r
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Provide base directory.')
-    parser.add_argument('--base_dir', type=str, default="./generated_paths/train_turn_only", help='Base directory for the script')
-    parser.add_argument("--samples", type=int, default=10, help="Number of samples")
-    parser.add_argument("--record_hz", type=str, default=1, help="Recording frequency")
+    parser.add_argument('--base_dir', type=str, default="./generated_paths/activations_50", help='Base directory for the script')
+    parser.add_argument("--samples", type=int, default=50, help="Number of samples")
+    parser.add_argument("--record_hz", type=str, default=8, help="Recording frequency")
     parser.add_argument("--task_tag", type=str, choices=["2choice", "fly_and_turn", "4turn"], default="2choice", help="Task tag")
     args = parser.parse_args()
 
-    possible_objects = ["red ball", "blue ball", "yellow_ball", "green_ball", "purple_ball", "red_cube", "blue_cube", "yellow_cube", "green_cube", "purple_cube", "red_pyramid", "blue_pyramid", "yellow_pyramid", "green_pyramid", "purple_pyramid"]
-    possible_targets = ["red ball", "blue ball", "yellow_ball", "green_ball", "purple_ball", "red_cube", "blue_cube", "yellow_cube", "green_cube", "purple_cube", "red_pyramid", "blue_pyramid", "yellow_pyramid", "green_pyramid", "purple_pyramid"]
+    possible_objects = ["red ball", "blue ball", "yellow ball", "green ball", "purple ball", "red cube", "blue cube", "yellow cube", "green cube", "purple cube", "red pyramid", "blue pyramid", "yellow pyramid", "green pyramid", "purple pyramid"]
+    possible_targets = ["red ball", "blue ball", "yellow ball", "green ball", "purple ball", "red cube", "blue cube", "yellow cube", "green cube", "purple cube", "red pyramid", "blue pyramid", "yellow pyramid", "green pyramid", "purple pyramid"]
     
     all_configs = []
     run_numbers = []
@@ -263,8 +265,12 @@ if __name__ == "__main__":
     for run_number in range(args.samples):
         template_init_conditions = generate_init_conditions_2choice(["red ball", "blue ball"], ["red ball"])
 
+        template_init_conditions["start_heights"] = template_init_conditions["start_heights"][0]
+        template_init_conditions["target_heights"] = template_init_conditions["target_heights"][0]
+
         for target in possible_targets:
-            non_target = [obj for obj in possible_objects if obj != target]
+            non_target_list = [obj for obj in possible_objects if obj != target]
+            non_target = random.choice(non_target_list)
             objects_list = [target, non_target]
             specific_init_conditions = copy.deepcopy(template_init_conditions)
             specific_init_conditions["objects_color"] = objects_list
@@ -280,7 +286,7 @@ if __name__ == "__main__":
     
     print(len(all_configs))
     print(len(run_numbers))
-
-    joblib.Parallel(n_jobs=16)(joblib.delayed(generate_euclidean_product_trajectories)(base_dir, run_number, config, record_hz, task_tag) for run_number, config in tqdm(zip(run_numbers, all_configs)))
+    
+    joblib.Parallel(n_jobs=16)(joblib.delayed(generate_euclidean_product_trajectories)(base_dir, run_number, config, record_hz, task_tag) for run_number, config in tqdm(list(zip(run_numbers, all_configs))))
     # joblib.Parallel(n_jobs=16)(joblib.delayed(generate_euclidean_product_trajectories)(base_dir, d, record_hz, task_tag) for d in tqdm(total_list))
 

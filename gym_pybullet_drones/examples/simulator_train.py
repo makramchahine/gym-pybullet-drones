@@ -101,6 +101,8 @@ class TrainSimulator(BaseSimulator):
             last_height = target_pos[-1][2]
             dist = distance_to_target(last_pos, final_target)
             yaw_dist = signed_angular_distance(last_yaw, final_theta + self.theta_environment)
+            print(f"self.target_height: {self.target_height}")
+            print(f"last_height: {last_height}")
             height_dist = self.target_height - last_height
 
             dist_to_crit = dist - 0.49
@@ -207,7 +209,7 @@ class TrainSimulator(BaseSimulator):
         yaw_noise_matrix = np.random.normal(new_mean, 0.001, size=(1, self.checkpoint_frame))
         yaw_noise_matrix -= np.mean(yaw_noise_matrix, axis=1, keepdims=True)
 
-        self.TARGET_POS = np.array(self.TARGET_POS)
+        self.TARGET_POS = np.array(self.TARGET_POS, dtype=np.float64)
         self.TARGET_ATT = np.array(self.TARGET_ATT)
         self.TARGET_POS[0, :self.checkpoint_frame, 0:3] += xyz_noise_matrix.T
         self.TARGET_ATT[0, :self.checkpoint_frame, 2] += yaw_noise_matrix[0].T
@@ -252,8 +254,8 @@ class TrainSimulator(BaseSimulator):
                     self.action[str(j)], _, _ = self.ctrl[j].computeControlFromState(
                         control_timestep=self.CTRL_EVERY_N_STEPS * self.env.TIMESTEP,
                         state=state,
-                        target_pos = self.TARGET_POS[j, self.simulation_counter],
-                        target_rpy = self.TARGET_ATT[j, self.simulation_counter]
+                        target_pos=self.TARGET_POS[j, self.simulation_counter],
+                        target_rpy=self.TARGET_ATT[j, self.simulation_counter]
                         )
 
             #* Network Frequency is 30hz
