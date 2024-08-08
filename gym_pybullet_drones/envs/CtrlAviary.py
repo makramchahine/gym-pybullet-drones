@@ -81,9 +81,9 @@ class CtrlAviary(BaseAviary):
 
         """
         filename_map = {
-            'R': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2red.urdf",
-            'B': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2blue.urdf",
-            'G': "/home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/sphere2green.urdf",
+            'R': "/home/alex/miniconda3/envs/gs_pyb_comb/lib/python3.8/site-packages/pybullet_data/sphere2red.urdf",
+            'B': "/home/alex/miniconda3/envs/gs_pyb_comb/lib/python3.8/site-packages/pybullet_data/sphere2blue.urdf",
+            'G': "/home/alex/miniconda3/envs/gs_pyb_comb/lib/python3.8/site-packages/pybullet_data/sphere2green.urdf",
         }
         assert color in filename_map.keys(), "Color not supported"
                 
@@ -114,10 +114,10 @@ class CtrlAviary(BaseAviary):
         #             [0, 0, 0],
         #             physicsClientId=self.CLIENT
         # )
-        # samurai_id = p.loadURDF("samurai.urdf",
-        #             [0, 0, 0],
-        #            physicsClientId=self.CLIENT
-        #            )
+        samurai_id = p.loadURDF("samurai.urdf",
+                    [0, 0, 0],
+                   physicsClientId=self.CLIENT
+                   )
         # stadium_id = p.loadSDF("stadium.sdf",
         #             physicsClientId=self.CLIENT
         #             )
