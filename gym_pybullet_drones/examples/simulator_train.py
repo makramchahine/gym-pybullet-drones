@@ -16,10 +16,17 @@ NUM_TIMESTEPS_TO_CRITICAL = (55, 90) # this doesn't work
 
 
 class TrainSimulator(BaseSimulator):
+<<<<<<< Updated upstream
     def __init__(self, ordered_objs, ordered_rel_locs, sim_dir, start_H, target_Hs, Theta, Theta_offset, record_hz):
         super().__init__(ordered_objs, ordered_rel_locs, sim_dir, start_H, target_Hs, Theta, Theta_offset, record_hz)
 
         self.num_frames = random.randint(NUM_TIMESTEPS_TO_CRITICAL[0], NUM_TIMESTEPS_TO_CRITICAL[1])
+=======
+    def __init__(self, sim_dir, init_conditions, record_hz, task_tag):
+        super().__init__(sim_dir, init_conditions, record_hz)
+        self.turn_mode = True if "turn" in task_tag else False
+        self.num_frames = random.randint(TARGET_NUM_TIMESTEPS_TO_CRITICAL[0], TARGET_NUM_TIMESTEPS_TO_CRITICAL[1])
+>>>>>>> Stashed changes
 
         self.dist_0_x = self.ordered_rel_locs[0][0]
         self.dist_0_yaw = 0 - Theta_offset

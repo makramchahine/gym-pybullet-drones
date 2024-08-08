@@ -168,7 +168,7 @@ class BaseSimulator():
 
         #! Simulation Params
         self.CTRL_EVERY_N_STEPS = int(np.floor(self.env.SIM_FREQ / self.control_freq_hz)) # 1
-        self.REC_EVERY_N_STEPS = int(np.floor(self.env.SIM_FREQ / self.record_freq_hz )) #30 #240
+        # self.REC_EVERY_N_STEPS = int(np.floor(self.env.SIM_FREQ / self.record_freq_hz )) #30 #240
         self.action = {str(i): np.array([0, 0, 0, 0]) for i in range(self.num_drones)}
 
         if self.has_precomputed_trajectory:

@@ -25,10 +25,8 @@ import csv
 import math
 import random
 import numpy as np
-import pandas as pd
 import pybullet as p
 import matplotlib.pyplot as plt
-import cv2
 import copy
 import glob
 import re
@@ -48,9 +46,10 @@ from gym_pybullet_drones.utils.utils import sync, str2bool
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(SCRIPT_DIR, "..", "..", ".."))
-from drone_multimodal.utils.model_utils import load_model_from_weights, generate_hidden_list, get_readable_name, \
+from drone_causality.utils.model_utils import load_model_from_weights, generate_hidden_list, get_readable_name, \
     get_params_from_json
-from drone_multimodal.keras_models import IMAGE_SHAPE
+from drone_causality.keras_models import IMAGE_SHAPE
+from drone_causality.preprocess.process_data_util import resize_and_crop
 
 from culekta_utils import *
 
@@ -93,7 +92,8 @@ def run(
         duration_sec=None,
         colab=DEFAULT_COLAB,
         params_path = DEFAULT_PARAMS_PATH,
-        checkpoint_path = DEFAULT_CHECKPOINT_PATH
+        checkpoint_path = DEFAULT_CHECKPOINT_PATH,
+        record_hz = DEFAULT_SAMPLING_FREQ_HQ,
 ):
     record_hz = DEFAULT_SAMPLING_FREQ_HQ
     ordered_objs, ordered_locs = loc_color_tuple
@@ -107,11 +107,11 @@ def run(
     model_params.single_step = True
     single_step_model = load_model_from_weights(model_params, checkpoint_path)
     hiddens = generate_hidden_list(model=single_step_model, return_numpy=True)
-    
-    if normalize_path is not None:
-        df_norm = pd.read_csv(normalize_path, index_col=0)
-        np_mean = df_norm.iloc[0].to_numpy()
-        np_std = df_norm.iloc[1].to_numpy()
+
+    # if normalize_path is not None:
+    #     df_norm = pd.read_csv(normalize_path, index_col=0)
+    #     np_mean = df_norm.iloc[0].to_numpy()
+    #     np_std = df_norm.iloc[1].to_numpy()
     print('Loaded Model')
 
     #! Trajectory-specific parameters

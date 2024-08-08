@@ -78,20 +78,34 @@ RUNS_PER_MODEL = 10
 # base_runner_folder = "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d3_300_srf_600sf"
 normalize_path = None
 base_runner_folders = [
-#    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_600_1_10hzf_bm_px_td_nlsp_gn_nt_srf_300sf_irreg2_64_hyp_cfc",
+    # "/home/makramchahine/repos/gaussian-splatting/drone_causality/runner_models/filtered_d6_nonorm_ss2_600_1_10hzf_bm_px_td_nlsp_gn_nt_pybullet_srf_300sf_irreg2_64_hyp_cfc_debugmerge_glorot"
+    #  "/home/alex/gaussian-splatting/drone_causality/runner_models/filtered_d6_nonorm_ss2_600_1_10hzf_bm_px_td_nlsp_gn_nt_pybulletf_srf_300sf_irreg2_64_hyp_cfc",
+   "/home/alex/gaussian-splatting/drone_causality/runner_models/filtered_pyb_halfwindow_srf_300sf_irreg2_64_hyp_corl_1_half",
+   "/home/alex/gaussian-splatting/drone_causality/runner_models/filtered_pyb_halfwindow_srf_300sf_irreg2_64_hyp_corl_2_half",
+   "/home/alex/gaussian-splatting/drone_causality/runner_models/filtered_pyb_halfwindow_srf_300sf_irreg2_64_hyp_corl_3_half",
+   "/home/alex/gaussian-splatting/drone_causality/runner_models/filtered_pyb_halfwindow_srf_300sf_irreg2_64_hyp_corl_4_half",
+#    "/home/alex/gaussian-splatting/drone_causality/runner_models/filtered_d6_nonorm_ss2_600_1_10hzf_bm_px_td_nlsp_gn_nt_pybulletf_srf_300sf_irreg2_64_hyp_corl_1",
+#    "/home/alex/gaussian-splatting/drone_causality/runner_models/filtered_d6_nonorm_ss2_600_1_10hzf_bm_px_td_nlsp_gn_nt_pybulletf_srf_300sf_irreg2_64_hyp_corl_2",
+#    "/home/alex/gaussian-splatting/drone_causality/runner_models/filtered_d6_nonorm_ss2_600_1_10hzf_bm_px_td_nlsp_gn_nt_pybulletf_srf_300sf_irreg2_64_hyp_corl_3",
+#    "/home/alex/gaussian-splatting/drone_causality/runner_models/filtered_d6_nonorm_ss2_600_1_10hzf_bm_px_td_nlsp_gn_nt_pybulletf_srf_300sf_irreg2_64_hyp_corl_4",
+#    "/home/alex/gaussian-splatting/drone_causality/runner_models/filtered_d6_nonorm_ss2_600_1_10hzf_bm_px_td_nlsp_gn_nt_pybulletf_srf_300sf_irreg2_64_hyp_corl_5",
 #    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_600_3hzf_bm_px_td_nlsp_gn_nt_srf_300sf_irreg2_64_hyp_cfc",
-   "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_200_9hzf_bm_px_td_nlsp_gn_nt_srf_150sf_irreg2_64_hyp_cfc",
+#    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_200_9hzf_bm_px_td_nlsp_gn_nt_srf_150sf_irreg2_64_hyp_cfc",
 #    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_600_3hzf_bm_px_td_nlsp_gn_nt_srf_300sf_irreg2_64_hyp_lstm",
 #    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_200_9hzf_bm_px_td_nlsp_gn_nt_srf_150sf_irreg2_64_hyp_lstm",
 #    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_600_1_10hzf_bm_px_td_nlsp_gn_nt_pybullet_srf_300sf_irreg2_64_hyp_cfc",
 #    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_600_3hzf_bm_px_td_nlsp_gn_nt_pybullet_srf_300sf_irreg2_64_hyp_cfc",
-   "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_200_9hzf_bm_px_td_nlsp_gn_nt_pybullet_srf_150sf_irreg2_64_hyp_cfc",
+#    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_200_9hzf_bm_px_td_nlsp_gn_nt_pybullet_srf_150sf_irreg2_64_hyp_cfc",
 #    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_600_3hzf_bm_px_td_nlsp_gn_nt_pybullet_srf_300sf_irreg2_64_hyp_lstm",
 #    "/home/makramchahine/repos/drone_multimodal/runner_models/filtered_d6_nonorm_ss2_200_9hzf_bm_px_td_nlsp_gn_nt_pybullet_srf_150sf_irreg2_64_hyp_lstm",
 ]
 record_hzs = [
     3,
     3,
+    3,
+    3,
+    # 3,
+    # 3,
     # 9,
     # 3,
     # 9
@@ -99,6 +113,14 @@ record_hzs = [
 variable_timesteps = [
     True,
     True,
+    True,
+    True,
+    # True,
+    # True,
+    # True,
+    # True,
+    # True,
+    # True,
     # True,
     # False,
     # False
@@ -256,7 +278,7 @@ if __name__ == "__main__":
 
     # assert len(total_list) == NUM_INITIALIZATIONS * 16 * 5, f"len(total_list): {len(total_list)}"
     # print(len(total_list))
-    joblib.Parallel(n_jobs=10)(joblib.delayed(run)(d, output_folder=output_folder_path, params_path=params_path, checkpoint_path=checkpoint_path, duration_sec=DEFAULT_DURATION_SEC, record_hz=record_hz, variable_timestep=variable_timestep) for d, params_path, checkpoint_path, output_folder_path, record_hz, variable_timestep in tqdm(zip(total_list, concurrent_params_paths, concurrent_checkpoint_paths, output_folder_paths, expanded_record_hzs, expanded_variable_timesteps)))
+    joblib.Parallel(n_jobs=10)(joblib.delayed(run)(d, output_folder=output_folder_path, params_path=params_path, checkpoint_path=checkpoint_path, duration_sec=DEFAULT_DURATION_SEC, record_hz=record_hz) for d, params_path, checkpoint_path, output_folder_path, record_hz in tqdm(zip(total_list, concurrent_params_paths, concurrent_checkpoint_paths, output_folder_paths, expanded_record_hzs)))
     # for d, params_path, checkpoint_path, output_folder_path in zip(total_list, concurrent_params_paths, concurrent_checkpoint_paths, output_folder_paths):
     #     run(d, normalize_path=normalize_path, output_folder=output_folder_path, params_path=params_path, checkpoint_path=checkpoint_path, duration_sec=DEFAULT_DURATION_SEC)
 
@@ -285,7 +307,8 @@ if __name__ == "__main__":
                                     width, height = img.size
                                     
                                     draw = ImageDraw.Draw(img)
-                                    font = ImageFont.truetype("/usr/share/fonts/truetype/lato/Lato-Medium.ttf", size=20)
+                                    font = ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeSerif.ttf", size=20)
+                                    # font = ImageFont.truetype("/usr/share/fonts/truetype/lato/Lato-Medium.ttf", size=20)
                                     if i < 8:
                                         draw.text((width - 60, 10), "begin", fill="red", font=font)
 
@@ -298,12 +321,12 @@ if __name__ == "__main__":
                     except Exception as e:
                         print(e)
                     
-                    with open(os.path.join(absolute_path, "success.txt"), "r") as f:
-                        lines = f.readlines()
-                        success_array.append(int(lines[0].strip()))
+                #     with open(os.path.join(absolute_path, "success.txt"), "r") as f:
+                #         lines = f.readlines()
+                #         success_array.append(int(lines[0].strip()))
 
-                # save success_array as csv
-                np.savetxt(os.path.join(default_output_folder, eval_dir, "success.csv"), success_array, delimiter=",", fmt="%d")
+                # # save success_array as csv
+                # np.savetxt(os.path.join(default_output_folder, eval_dir, "success.csv"), success_array, delimiter=",", fmt="%d")
 
                 import subprocess
                 video_paths = [os.path.join(default_output_folder, eval_dir, absolute_path, "rand.mp4") for absolute_path in sorted(os.listdir(os.path.join(default_output_folder, eval_dir))) if os.path.isdir(os.path.join(default_output_folder, eval_dir, absolute_path)) and  "rand.mp4" in os.listdir(os.path.join(default_output_folder, eval_dir, absolute_path))]
