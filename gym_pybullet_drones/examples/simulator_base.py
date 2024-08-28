@@ -30,8 +30,8 @@ class BaseSimulator():
         self.control_freq_hz = DEFAULT_CONTROL_FREQ_HZ
         self.record_freq_hz = record_hz
         self.duration_sec = DEFAULT_DURATION_SEC
-        self.start_height = init_conditions["start_heights"]
-        self.target_height = init_conditions["target_heights"]
+        self.start_height = init_conditions["start_heights"][0] if isinstance(init_conditions["start_heights"], list) else init_conditions["start_heights"]
+        self.target_height = init_conditions["target_heights"][0] if isinstance(init_conditions["target_heights"], list) else init_conditions["target_heights"]
         self.theta_offset = init_conditions["theta_offset"]
         self.theta_environment = init_conditions["theta_environment"]
         self.objects_color = init_conditions["objects_color"]

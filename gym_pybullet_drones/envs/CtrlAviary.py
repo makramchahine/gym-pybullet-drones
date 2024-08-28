@@ -7,8 +7,8 @@ import random
 from gym_pybullet_drones.envs.BaseAviary import BaseAviary
 from gym_pybullet_drones.utils.enums import DroneModel, Physics
 
-from env_configs import URDF_MAP, ORIENTATION_MAP, SCALING_MAP
-from inference_configs import env_name
+from gym_pybullet_drones.utils.config import URDF_MAP, ORIENTATION_MAP, SCALING_MAP
+from inference.config import env_name
 
 class CtrlAviary(BaseAviary):
     """Multi-drone environment class for control applications."""
@@ -116,10 +116,15 @@ class CtrlAviary(BaseAviary):
             for color, location in zip(self.CUSTOM_OBJECT_LOCATION["colors"], self.CUSTOM_OBJECT_LOCATION["locations"]):
                 # add new urdf files at /home/makramchahine/miniconda3/envs/multimodal/lib/python3.8/site-packages/pybullet_data/stadium.sdf
 
-                print(f"added {color} at {location}")
+                # if list of list, unpack first element
+                print(location)
+                if type(location[0]) is list:
+                    location = location[0]
 
                 if len(location) == 2:
                     location = (*location, 0.6)
+
+                print(f"added {color} at {location}")
                 
                 p.loadURDF(URDF_MAP[color],
                         [*location],
