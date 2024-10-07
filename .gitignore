@@ -1,3 +1,5 @@
+generated_paths/*
+
 # TODOs 
 TODOs.md
 examples/debug.py
