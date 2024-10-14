@@ -10,9 +10,9 @@ export PYTHONPATH=$PYTHONPATH:$(pwd)
 
 ```
 
-This repo tests the performance of Liquid policies contained in drone_multimodal, so some code requires the drone_multimodal repo to be in your PYTHONPATH.
+This repo tests the performance of Liquid policies contained in drone_causality, so some code requires the drone_causality repo to be in your PYTHONPATH.
 ```bash
-export PYTHONPATH=$PYTHONPATH:<path_to_repo>/drone_multimodal
+export PYTHONPATH=$PYTHONPATH:<path_to_repo>/drone_causality
 
 ```
 

@@ -13,6 +13,11 @@ import joblib
 import subprocess
 import sys
 
+import sys
+print("PYTHONPATH:")
+print(sys.path)
+
+
 from gym_pybullet_drones.utils.enums import DroneModel, Physics
 from gym_pybullet_drones.utils.utils import sync, str2bool
 
