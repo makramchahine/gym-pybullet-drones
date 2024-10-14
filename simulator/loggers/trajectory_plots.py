@@ -2,7 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-from simulator.culekta_utils import convert_to_relative
+from simulator.simulator_utils import convert_to_relative
 
 def export_plots(global_pos_array, timestepwise_displacement_array, vel_array, vel_cmds, objects_absolute_target, theta_environment, sim_dir):
     x_data = np.array(global_pos_array)[:, 0]

@@ -11,7 +11,7 @@ from gym_pybullet_drones.envs.CtrlAviary import CtrlAviary
 from gym_pybullet_drones.control.DSLPIDControl import DSLPIDControl
 from gym_pybullet_drones.control.SimplePIDControl import SimplePIDControl
 
-from simulator.culekta_utils import *
+from simulator.simulator_utils import *
 from simulator.simulator_utils import *
 from simulator.simulator_base import BaseSimulator
 from simulator.default_pyb_settings import *

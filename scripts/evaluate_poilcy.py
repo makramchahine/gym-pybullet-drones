@@ -13,15 +13,10 @@ import joblib
 import subprocess
 import sys
 
-sys.path.append("/home/makramchahine/repos")
-sys.path.append("/home/makramchahine/repos/gym-pybullet-drones")
-sys.path.append("/home/makramchahine/repos/gym-pybullet-drones/gym_pybullet_drones")
-sys.path.append("/home/makramchahine/repos/gym-pybullet-drones/gym_pybullet_drones/examples")
-
 from gym_pybullet_drones.utils.enums import DroneModel, Physics
 from gym_pybullet_drones.utils.utils import sync, str2bool
 
-from runna_hike import run_pybullet_only_hike
+from simulator.runna_hike import run_pybullet_only_hike
 
 DEFAULT_DRONES = DroneModel("cf2x")
 DEFAULT_NUM_DRONES = 1
@@ -74,7 +69,7 @@ variable_timesteps = [
 tag_names = ["_".join(base_runner_folder.split('/')[-1].split('_')[1:]) for base_runner_folder in base_runner_folders]
 tag_names = [tag_name + "_multi" if multi else tag_name for tag_name in tag_names]
 tag_names = [tag_name + "_vanish_60deg_100_sam_pnorm_at3hz" for tag_name in tag_names] 
-default_output_folders = [f'cl_real_{tag_name}' for tag_name in tag_names]
+default_output_folders = [f'results/cl_real_{tag_name}' for tag_name in tag_names]
 
 if __name__ == "__main__":
     #### Define and parse (optional) arguments for the script ##
@@ -167,8 +162,6 @@ if __name__ == "__main__":
                     expanded_record_hzs.append(record_hz)
                     expanded_variable_timesteps.append(variable_timestep)
 
-    print(output_folder_paths)
-
     #! Concurrent Run
     futures = []
     returns = []
@@ -217,7 +210,6 @@ if __name__ == "__main__":
     print(f"default_output_folders: {default_output_folders}")
     
     for default_output_folder in default_output_folders:
-        print(f"default_output_folder: {default_output_folder}")
         absolute_paths = []
         try:
             for eval_dir in os.listdir(default_output_folder):

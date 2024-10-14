@@ -14,7 +14,7 @@ from gym_pybullet_drones.utils.Logger import Logger
 from path_templates.schemas import InitConditionsSchema
 
 from simulator.loggers.trajectory_plots import export_plots
-from simulator.culekta_utils import *
+from simulator.simulator_utils import *
 from simulator.default_pyb_settings import *
 aligned_follower = True
 

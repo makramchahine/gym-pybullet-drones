@@ -26,9 +26,9 @@ sys.path.append(os.path.join(SCRIPT_DIR, "..", "..", ".."))
 from drone_multimodal.utils.model_utils import load_model_from_weights, generate_hidden_list, get_readable_name, \
     get_params_from_json
 from drone_multimodal.keras_models import IMAGE_SHAPE
-from drone_causality.preprocess.process_data_util import resize_and_crop
+from drone_multimodal.preprocess.process_data_util import resize_and_crop
 
-from culekta_utils import *
+from simulator.simulator_utils import *
 
 DEFAULT_DRONES = DroneModel("cf2x")
 DEFAULT_NUM_DRONES = 1

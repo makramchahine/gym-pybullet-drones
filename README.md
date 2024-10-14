@@ -10,6 +10,12 @@ export PYTHONPATH=$PYTHONPATH:$(pwd)
 
 ```
 
+This repo tests the performance of Liquid policies contained in drone_multimodal, so some code requires the drone_multimodal repo to be in your PYTHONPATH.
+```bash
+export PYTHONPATH=$PYTHONPATH:<path_to_repo>/drone_multimodal
+
+```
+
 # Usage
 
 ## Generating Synthetic Trajectories
@@ -18,3 +24,12 @@ python scripts/generate_synthetic_trajectories.py
 ```
 
 ## Evaluation
+```python
+python scripts/evaluate_policy.py
+```
+
+## Creating new synthetic setups
+In `path_templates/trajectory_templates.py`, you can create new synthetic setups by defining new initialization schemas. The function can modify the initial state of the drone, what the targets are, the positions of the targets, and the intended trajectory of the drone.
+
+## Creating new environments
+TODO

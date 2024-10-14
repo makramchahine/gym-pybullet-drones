@@ -10,7 +10,7 @@ import argparse
 
 from simulator.simulator_base import DEFAULT_NUM_DRONES
 from simulator.simulator_train import TrainSimulator
-from simulator.culekta_utils import setup_folders
+from simulator.simulator_utils import setup_folders
 from path_templates.trajectory_templates import get_init_conditions_func
 
 
