@@ -4,9 +4,8 @@ import numpy as np
 import pybullet as p
 import matplotlib.pyplot as plt
 
-from gym_pybullet_drones.utils.enums import ImageType
 
-from simulator.simulator_utils import *
+from gym_pybullet_drones.utils.enums import ImageType
 from simulator.simulator_utils import *
 from simulator.simulator_base import BaseSimulator
 
