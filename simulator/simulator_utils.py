@@ -1,6 +1,6 @@
 import numpy as np
 
-from gym_pybullet_drones.examples.culekta_utils import convert_to_relative, signed_angular_distance
+from simulator.culekta_utils import convert_to_relative, signed_angular_distance
 
 def convert_vel_cmd_to_world_frame(vel_cmd, yaw):
     # convert from body_frame to world_frame

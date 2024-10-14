@@ -11,10 +11,10 @@ from gym_pybullet_drones.envs.CtrlAviary import CtrlAviary
 from gym_pybullet_drones.control.DSLPIDControl import DSLPIDControl
 from gym_pybullet_drones.control.SimplePIDControl import SimplePIDControl
 
-from culekta_utils import *
-from simulator_utils import *
-from simulator_base import BaseSimulator
-from default_pyb_settings import *
+from simulator.culekta_utils import *
+from simulator.simulator_utils import *
+from simulator.simulator_base import BaseSimulator
+from simulator.default_pyb_settings import *
 
 FINISH_COUNTER_THRESHOLD = 32
 RANDOM_WALK = True
@@ -36,8 +36,8 @@ class TrainSimulator(BaseSimulator):
         self.eta_yaw_per_control = self.dist_0_yaw / num_control_steps
         self.eta_z_per_control = self.dist_0_z / num_control_steps
 
+        # Dynamics intended for generation of training data
         self.I_X = random.uniform(0.025, 0.075)
-
         self.P_X = 0.18 #random.uniform(0.18, 0.2)
         self.P_YAW = 0.2 #0.1 for 1 dist
         self.P_Z = 0.2

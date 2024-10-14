@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 
 from gym_pybullet_drones.utils.enums import ImageType
 
-from gym_pybullet_drones.examples.culekta_utils import *
-from gym_pybullet_drones.examples.simulator_utils import *
-from gym_pybullet_drones.examples.simulator_base import BaseSimulator
+from simulator.culekta_utils import *
+from simulator.simulator_utils import *
+from simulator.simulator_base import BaseSimulator
 
-from gym_pybullet_drones.examples.schemas import InitConditionsSchema
+from path_templates.schemas import InitConditionsSchema
 
 FINISH_COUNTER_THRESHOLD = 1.5 # in seconds
 

@@ -11,12 +11,11 @@ from gym_pybullet_drones.envs.VisionAviary import VisionAviary
 from gym_pybullet_drones.control.DSLPIDControl import DSLPIDControl
 from gym_pybullet_drones.control.SimplePIDControl import SimplePIDControl
 from gym_pybullet_drones.utils.Logger import Logger
-from gym_pybullet_drones.examples.schemas import InitConditionsSchema
+from path_templates.schemas import InitConditionsSchema
 
-
-from gym_pybullet_drones.examples.culekta_utils import *
-from gym_pybullet_drones.examples.simulator_utils import *
-from gym_pybullet_drones.examples.default_pyb_settings import *
+from simulator.loggers.trajectory_plots import export_plots
+from simulator.culekta_utils import *
+from simulator.default_pyb_settings import *
 aligned_follower = True
 
 CRITICAL_DIST = 0.5
@@ -174,65 +173,4 @@ class BaseSimulator():
                 )
 
     def export_plots(self):
-        x_data = np.array(self.global_pos_array)[:, 0]
-        y_data = np.array(self.global_pos_array)[:, 1]
-        yaw = np.array(self.global_pos_array)[:, 3]
-
-        x_data_integrated = np.cumsum(np.array(self.timestepwise_displacement_array)[:, 0])
-        y_data_integrated = np.cumsum(np.array(self.timestepwise_displacement_array)[:, 1])
-        yaw_integrated = np.cumsum(np.array(self.timestepwise_displacement_array)[:, 3])
-
-        # ! Path Plot
-        fig, axs = plt.subplots(2, 1)
-        axs[0].plot(x_data, y_data, alpha=0.5)
-        axs[0].plot(x_data_integrated, y_data_integrated, alpha=0.5)
-        axs[0].set_aspect('equal', adjustable='box')
-        
-        for target in self.objects_absolute_target:
-            rel_target = convert_to_relative(target, self.theta_environment)
-            axs[0].plot(rel_target[0], rel_target[1], 'ro')
-
-        legend_titles = ["Sim Position", "Disp Int", "Target"]
-        axs[0].legend(legend_titles)
-        
-        axs[1].plot(yaw)
-        axs[1].plot(yaw_integrated)
-        axs[1].set_ylabel('Yaw')
-        axs[1].legend(["Yaw", "Yaw Disp Int"])
-
-        fig.savefig(self.sim_dir + "/sim_pos.jpg")
-
-        # ! timestepwise_displacement as a 2x2 subplot
-        timestepwise_displacement_data = np.array(self.timestepwise_displacement_array)
-        fig2, axs2 = plt.subplots(2, 2)
-        labels = ['X Displacement', 'Y Displacement', 'Z Displacement', 'Yaw Displacement']
-        for idx, label in enumerate(labels):
-            axs2.flat[idx].plot(timestepwise_displacement_data[:, idx])
-            axs2.flat[idx].set_ylabel(label)
-        fig2.savefig(self.sim_dir + "/timestepwise_displacement.jpg")
-
-        # ! Velocity Plot
-        vel_data = np.array(self.vel_array)
-        fig3, axs3 = plt.subplots(2, 2)
-        labels = ['X Velocity', 'Y Velocity', 'Z Velocity', 'Yaw Rate']
-        for idx, label in enumerate(labels):
-            axs3.flat[idx].plot(vel_data[:, idx])
-            axs3.flat[idx].set_ylabel(label)
-        fig3.savefig(self.sim_dir + "/sim_velocity.jpg")
-
-        # ! Velocity Commands Plot
-        if self.vel_cmds:
-            vel_cmd_data = np.array(self.vel_cmds)
-            fig4, axs4 = plt.subplots(2, 2)
-            labels = ['X Velocity', 'Y Velocity', 'Z Velocity', 'Yaw Rate']
-            for idx, label in enumerate(labels):
-                axs4.flat[idx].plot(vel_cmd_data[:, idx])
-                axs4.flat[idx].set_ylabel(label)
-            fig4.savefig(self.sim_dir + "/vel_cmds.jpg")
-
-        np.savetxt(os.path.join(self.sim_dir, 'sim_pos.csv'), np.array(self.global_pos_array), delimiter=',')
-        np.savetxt(os.path.join(self.sim_dir, 'sim_vel.csv'), np.array(self.vel_array), delimiter=',')
-        np.savetxt(os.path.join(self.sim_dir, 'timestepwise_displacement.csv'), np.array(self.timestepwise_displacement_array), delimiter=',')
-        if self.vel_cmds:
-            np.savetxt(os.path.join(self.sim_dir, 'vel_cmds.csv'), np.array(self.vel_cmds), delimiter=',')
-
+        export_plots(self.global_pos_array, self.timestepwise_displacement_array, self.vel_array, self.vel_cmds, self.objects_absolute_target, self.theta_environment, self.sim_dir)

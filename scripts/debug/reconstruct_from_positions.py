@@ -4,7 +4,7 @@ import joblib
 from tqdm import tqdm
 
 from gym_pybullet_drones.examples.simulator_train import TrainSimulator
-from gym_pybullet_drones.examples.schemas import parse_init_conditions
+from path_templates.schemas import parse_init_conditions
 
 def generate_reconstructed_run(recon_folder, task_tag):
     init_conditions = parse_init_conditions(recon_folder)
